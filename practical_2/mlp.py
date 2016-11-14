@@ -9,6 +9,7 @@ import tensorflow as tf
 from tensorflow.contrib.layers import initializers
 from tensorflow.contrib.layers import regularizers
 
+
 class MLP(object):
   """
   This class implements a Multilayer Perceptron in Tensorflow.
@@ -16,10 +17,10 @@ class MLP(object):
   Once initialized an MLP object can perform inference and evaluation.
   """
 
-  def __init__(self, n_hidden = [100], n_classes = 10, is_training = True,
-               activation_fn = tf.nn.relu, dropout_rate = 0.,
-               weight_initializer = initializers.xavier_initializer(),
-               weight_regularizer = regularizers.l2_regularizer(0.001)):
+  def __init__(self, n_hidden=[100], n_classes=10, is_training=True,
+               activation_fn=tf.nn.relu, dropout_rate=0.,
+               weight_initializer=initializers.xavier_initializer(),
+               weight_regularizer=regularizers.l2_regularizer(0.001)):
     """
     Constructor for an MLP object. Default values should be used as hints for
     the usage of each parameter.
@@ -91,7 +92,22 @@ class MLP(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+
+    init_bias = 0
+
+    last = x
+    for idx in range(1, len(self.n_hidden)):
+      weights = tf.get_variable(shape=[self.n_hidden[idx-1], self.n_hidden[idx]], dtype=tf.float32,
+                                initializer=tf.contrib.layers.xavier_initializer())
+
+      biases = tf.get_variable(dtype=tf.float32,
+                               initializer=(tf.random_normal([self.n_hidden[idx]], mean=init_bias)))
+
+      last = self.activation_fn(tf.matmul(last, weights) + biases)
+
+    return last
+
+
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -123,7 +139,11 @@ class MLP(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    ce_loss = tf.nn.softmax_cross_entropy_with_logits(logits, labels)
+
+    reg_loss = 0
+
+    loss = ce_loss + reg_loss
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -151,7 +171,10 @@ class MLP(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
-    raise NotImplementedError
+    guesses = tf.argmax(logits, dimension=1)
+    targets = tf.argmax(labels, dimension=1)
+    score = tf.to_int32(tf.equal(guesses, targets))
+    accuracy = tf.reduce_sum(score) / tf.to_float(tf.size(score))
     ########################
     # END OF YOUR CODE    #
     #######################
