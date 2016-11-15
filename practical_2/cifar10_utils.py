@@ -9,12 +9,13 @@ from __future__ import print_function
 import numpy as np
 import os
 import cPickle as pickle
-from six.moves import xrange
+# from six.moves import xrange
 
 from tensorflow.contrib.learn.python.learn.datasets import base
 
 # Default paths for downloading CIFAR10 data
 CIFAR10_FOLDER = 'cifar10/cifar-10-batches-py'
+
 
 def load_cifar10_batch(batch_filename):
   """
@@ -29,9 +30,10 @@ def load_cifar10_batch(batch_filename):
     batch = pickle.load(f)
     X = batch['data']
     Y = batch['labels']
-    X = X.reshape(10000, 3, 32, 32).transpose(0,2,3,1).astype(np.float32)
+    X = X.reshape(10000, 3, 32, 32).transpose(0, 2, 3, 1).astype(np.float32)
     Y = np.array(Y)
     return X, Y
+
 
 def load_cifar10(cifar10_folder):
   """
@@ -57,6 +59,7 @@ def load_cifar10(cifar10_folder):
   X_test, Y_test = load_cifar10_batch(os.path.join(cifar10_folder, 'test_batch'))
   return X_train, Y_train, X_test, Y_test
 
+
 def get_cifar10_raw_data(data_dir):
   """
   Gets raw CIFAR10 data from http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz.
@@ -73,6 +76,7 @@ def get_cifar10_raw_data(data_dir):
   X_train, Y_train, X_test, Y_test = load_cifar10(data_dir)
 
   return X_train, Y_train, X_test, Y_test
+
 
 def preprocess_cifar10_data(X_train_raw, Y_train_raw, X_test_raw, Y_test_raw):
   """
@@ -104,6 +108,7 @@ def preprocess_cifar10_data(X_train_raw, Y_train_raw, X_test_raw, Y_test_raw):
 
   return X_train, Y_train, X_test, Y_test
 
+
 def dense_to_one_hot(labels_dense, num_classes):
   """
   Convert class labels from scalars to one-hot vectors.
@@ -119,6 +124,7 @@ def dense_to_one_hot(labels_dense, num_classes):
   labels_one_hot = np.zeros((num_labels, num_classes))
   labels_one_hot.flat[index_offset + labels_dense.ravel()] = 1
   return labels_one_hot
+
 
 class DataSet(object):
   """
@@ -186,9 +192,10 @@ class DataSet(object):
     end = self._index_in_epoch
     return self._images[start:end], self._labels[start:end]
 
+
 def read_data_sets(data_dir, one_hot = True, validation_size = 0):
   """
-  Returns the dataset readed from data_dir.
+  Returns the dataset read from data_dir.
   Uses or not uses one-hot encoding for the labels.
   Subsamples validation set with specified size if necessary.
 
@@ -228,6 +235,7 @@ def read_data_sets(data_dir, one_hot = True, validation_size = 0):
   test = DataSet(test_images, test_labels)
 
   return base.Datasets(train=train, validation=validation, test=test)
+
 
 def get_cifar10(data_dir = CIFAR10_FOLDER, one_hot = True, validation_size = 0):
   """

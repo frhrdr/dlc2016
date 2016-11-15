@@ -9,6 +9,8 @@ import argparse
 
 import tensorflow as tf
 import numpy as np
+from mlp import MLP
+from cifar10_utils import load_cifar10, preprocess_cifar10_data, dense_to_one_hot, DataSet
 
 # The default parameters are the same parameters that you used during practical 1.
 # With these parameters you should get similar results as in the Numpy exercise.
@@ -39,36 +41,57 @@ LOG_DIR_DEFAULT = './logs/cifar10'
 # You can check the TensorFlow API at
 # https://www.tensorflow.org/versions/r0.11/api_docs/python/contrib.layers.html#initializers
 # https://www.tensorflow.org/versions/r0.11/api_docs/python/state_ops.html#sharing-variables
-WEIGHT_INITIALIZATION_DICT = {'xavier': None, # Xavier initialisation
-                              'normal': None, # Initialization from a standard normal
-                              'uniform': None, # Initialization from a uniform distribution
+WEIGHT_INITIALIZATION_DICT = {'xavier': tf.contrib.layers.xavier_initializer,  # Xavier initialisation
+                              'normal': tf.random_normal_initializer,  # Initialization from a standard normal
+                              'uniform': tf.random_uniform_initializer,  # Initialization from a uniform distribution
                              }
 
 # You can check the TensorFlow API at
 # https://www.tensorflow.org/versions/r0.11/api_docs/python/contrib.layers.html#regularizers
 # https://www.tensorflow.org/versions/r0.11/api_docs/python/state_ops.html#sharing-variables
-WEIGHT_REGULARIZER_DICT = {'none': None, # No regularization
-                           'l1': None, # L1 regularization
-                           'l2': None # L2 regularization
+WEIGHT_REGULARIZER_DICT = {'none': None,  # No regularization
+                           'l1': tf.contrib.layers.l1_regularizer,  # L1 regularization
+                           'l2': tf.contrib.layers.l2_regularizer  # L2 regularization
                           }
 
 # You can check the TensorFlow API at
 # https://www.tensorflow.org/versions/r0.11/api_docs/python/nn.html#activation-functions
-ACTIVATION_DICT = {'relu': None, # ReLU
-                   'elu': None, # ELU
-                   'tanh': None, #Tanh
-                   'sigmoid': None} #Sigmoid
+ACTIVATION_DICT = {'relu': tf.nn.relu,  # ReLU
+                   'elu': tf.nn.elu,  # ELU
+                   'tanh': tf.tanh,  # Tanh
+                   'sigmoid': tf.sigmoid}  # Sigmoid
 
 # You can check the TensorFlow API at
 # https://www.tensorflow.org/versions/r0.11/api_docs/python/train.html#optimizers
-OPTIMIZER_DICT = {'sgd': None, # Gradient Descent
-                  'adadelta': None, # Adadelta
-                  'adagrad': None, # Adagrad
-                  'adam': None, # Adam
-                  'rmsprop': None # RMSprop
+OPTIMIZER_DICT = {'sgd': tf.train.GradientDescentOptimizer,  # Gradient Descent
+                  'adadelta': tf.train.AdadeltaOptimizer,  # Adadelta
+                  'adagrad': tf.train.AdagradOptimizer,  # Adagrad
+                  'adam': tf.train.AdamOptimizer,  # Adam
+                  'rmsprop': tf.train.RMSPropOptimizer  # RMSprop
                   }
 
 FLAGS = None
+# flags = tf.app.flags
+# FLAGS = flags.FLAGS
+
+# flags.DEFINE_float('learning_rate', LEARNING_RATE_DEFAULT, 'learning_rate')
+# flags.DEFINE_float('weight_reg_strength', WEIGHT_REGULARIZER_STRENGTH_DEFAULT, 'weight_regularizer_strength')
+# flags.DEFINE_float('weight_init_scale', WEIGHT_INITIALIZATION_SCALE_DEFAULT, 'weight_initialization_scale')
+# flags.DEFINE_integer('batch_size', BATCH_SIZE_DEFAULT, 'batch_size')
+# flags.DEFINE_integer('max_steps', MAX_STEPS_DEFAULT, 'max_steps')
+# flags.DEFINE_float('dropout_rate', DROPOUT_RATE_DEFAULT, 'dropout_rate')
+# flags.DEFINE_string('dnn_hidden_units', DNN_HIDDEN_UNITS_DEFAULT, 'dnn_hidden_units')
+# flags.DEFINE_string('weight_init', WEIGHT_INITIALIZATION_DEFAULT, 'weight_initialization')
+# flags.DEFINE_string('weight_reg', WEIGHT_REGULARIZER_DEFAULT, 'weight_regularizer')
+# flags.DEFINE_string('activation', ACTIVATION_DEFAULT, 'activation')
+# flags.DEFINE_string('optimizer', OPTIMIZER_DEFAULT, 'optimizer')
+#
+# flags.DEFINE_string('data_dir', DATA_DIR_DEFAULT, 'data_dir')
+# flags.DEFINE_string('log_dir', LOG_DIR_DEFAULT, 'log_dir')
+
+# for convienience
+# flags.DEFINE_integer('num_classes', 10, 'number of classes')
+# flags.DEFINE_integer('data_dim', 32 * 32 * 3, 'dimensionality of flattened data')
 
 def train():
   """
@@ -91,10 +114,59 @@ def train():
   ########################
   # PUT YOUR CODE HERE  #
   #######################
-  raise NotImplementedError
+  # load and prep data
+  data = load_cifar10(FLAGS.data_dir)
+  X_train, Y_train, X_test, Y_test = preprocess_cifar10_data(*data)
+  Y_train = dense_to_one_hot(Y_train, 10)
+  Y_test = dense_to_one_hot(Y_test, 10)
+  train_set = DataSet(X_train, Y_train)
+
+  # build model
+  with tf.Graph().as_default() as graph:
+
+    x_pl = tf.placeholder(tf.float32, shape=(FLAGS.batch_size, 3072))
+    y_pl = tf.placeholder(tf.int32, shape=(FLAGS.batch_size, 3072))
+    model = MLP(n_hidden=dnn_hidden_units,
+                n_classes=10,
+                is_training=True,
+                activation_fn=ACTIVATION_DICT[FLAGS.activation],
+                dropout_rate=FLAGS.dropout_rate,
+                weight_initializer=WEIGHT_INITIALIZATION_DICT[
+                    FLAGS.weight_initialization](FLAGS.weight_initialization_scale),
+                weight_regularizer= WEIGHT_REGULARIZER_DICT[
+                    FLAGS.weight_regularizer](FLAGS.weight_regularizer_strength)
+                )
+    logits = model.inference(x_pl)
+    loss = model.loss(logits, y_pl)
+    train_op = OPTIMIZER_DICT[FLAGS.optimizer](FLAGS.learning_rate).minimize(loss)
+
+    acc = model.accuracy(logits, y_pl)
+    # run model
+    with tf.Session() as sess:
+      init_op = tf.initialize_local_variables()
+      sess.run(init_op)
+
+      for step in range(FLAGS.max_steps):
+        x_batch, y_batch = train_set.next_batch(FLAGS.batch_size)
+        feed = {x_pl: np.reshape(x_batch, (FLAGS.batch_size, 3072)),
+                y_pl: y_batch}
+        model.is_training = True
+        sess.run([train_op], feed_dict=feed)
+
+        if step % 100 == 0:
+          feed = {x_pl: np.reshape(X_test, (X_test.shape[0], 3072)),
+                  y_pl: Y_train}
+          model.is_training = False
+          test_err, test_acc = sess.run([loss, acc], feed_dict=feed)
+          print('iteration ' + str(step) +
+                ' test error: ' + str(test_err) +
+                ' test accuracy: ' + str(test_acc))
+
+
   ########################
   # END OF YOUR CODE    #
   #######################
+
 
 def print_flags():
   """
@@ -102,6 +174,7 @@ def print_flags():
   """
   for key, value in vars(FLAGS).items():
     print(key + ' : ' + str(value))
+
 
 def main(_):
   """

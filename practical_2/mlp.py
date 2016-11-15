@@ -92,22 +92,32 @@ class MLP(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
+    def make_layer(in_tensor, in_dim, out_dim, act_fn, name):
+      weights = tf.get_variable(name=name + '_w',
+                                shape=[in_dim, out_dim], dtype=tf.float32,
+                                initializer=self.weight_initializer,
+                                collections=[tf.GraphKeys.GLOBAL_VARIABLES, tf.GraphKeys.WEIGHTS])
+      biases = tf.get_variable(name=name + '_b', dtype=tf.float32,
+                               initializer=(tf.random_normal([self.n_hidden[out_dim]], mean=0)))
+      lin = self.activation_fn(tf.matmul(in_tensor, weights) + biases)
+      act = act_fn(lin)
+      keep = tf.cond(self.is_training, lambda: tf.nn.dropout(act, 1 - self.dropout_rate), lambda: act)
 
-    init_bias = 0
+      tf.histogram_summary(name + '/w', weights)
+      tf.histogram_summary(name + '/b', biases)
+      tf.histogram_summary(name + '/lin_act', lin)
+      tf.histogram_summary(name + '/nln_act', act)
+      tf.histogram_summary(name + '/kept', keep)
+
+      return keep
 
     last = x
-    for idx in range(1, len(self.n_hidden)):
-      weights = tf.get_variable(shape=[self.n_hidden[idx-1], self.n_hidden[idx]], dtype=tf.float32,
-                                initializer=tf.contrib.layers.xavier_initializer())
+    in_dim = x.size()
+    for idx, out_dim in enumerate(self.n_hidden):
+      last = make_layer(last, in_dim, out_dim, self.activation_fn, 'l' + str(idx))
+      in_dim = out_dim
 
-      biases = tf.get_variable(dtype=tf.float32,
-                               initializer=(tf.random_normal([self.n_hidden[idx]], mean=init_bias)))
-
-      last = self.activation_fn(tf.matmul(last, weights) + biases)
-
-    return last
-
-
+    logits = make_layer(last, in_dim, self.n_classes, lambda t: t, 'lin')
     ########################
     # END OF YOUR CODE    #
     #######################
@@ -140,10 +150,12 @@ class MLP(object):
     # PUT YOUR CODE HERE  #
     #######################
     ce_loss = tf.nn.softmax_cross_entropy_with_logits(logits, labels)
-
-    reg_loss = 0
-
+    reg_loss = tf.contrib.layers.apply_regularization(self.weight_regularizer)
     loss = ce_loss + reg_loss
+
+    tf.scalar_summary('ce_loss', ce_loss)
+    tf.scalar_summary('reg_loss', reg_loss)
+    tf.scalar_summary('full_loss', loss)
     ########################
     # END OF YOUR CODE    #
     #######################
