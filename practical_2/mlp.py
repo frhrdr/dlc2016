@@ -96,11 +96,12 @@ class MLP(object):
       weights = tf.get_variable(name=name + '_w',
                                 shape=[in_dim, out_dim], dtype=tf.float32,
                                 initializer=self.weight_initializer,
-                                collections=[tf.GraphKeys.GLOBAL_VARIABLES, tf.GraphKeys.WEIGHTS])
+                                collections=[tf.GraphKeys.VARIABLES, tf.GraphKeys.WEIGHTS])
       biases = tf.get_variable(name=name + '_b', dtype=tf.float32,
-                               initializer=(tf.random_normal([self.n_hidden[out_dim]], mean=0)))
+                               initializer=(tf.random_normal([out_dim], mean=0)))
       lin = self.activation_fn(tf.matmul(in_tensor, weights) + biases)
       act = act_fn(lin)
+
       keep = tf.cond(self.is_training, lambda: tf.nn.dropout(act, 1 - self.dropout_rate), lambda: act)
 
       tf.histogram_summary(name + '/w', weights)
@@ -112,7 +113,7 @@ class MLP(object):
       return keep
 
     last = x
-    in_dim = x.size()
+    in_dim = x.get_shape()[1]
     for idx, out_dim in enumerate(self.n_hidden):
       last = make_layer(last, in_dim, out_dim, self.activation_fn, 'l' + str(idx))
       in_dim = out_dim

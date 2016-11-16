@@ -122,7 +122,7 @@ def train():
   train_set = DataSet(X_train, Y_train)
 
   # build model
-  with tf.Graph().as_default() as graph:
+  with tf.Graph().as_default():
 
     x_pl = tf.placeholder(tf.float32, shape=(FLAGS.batch_size, 3072))
     y_pl = tf.placeholder(tf.int32, shape=(FLAGS.batch_size, 3072))
@@ -132,9 +132,9 @@ def train():
                 activation_fn=ACTIVATION_DICT[FLAGS.activation],
                 dropout_rate=FLAGS.dropout_rate,
                 weight_initializer=WEIGHT_INITIALIZATION_DICT[
-                    FLAGS.weight_initialization](FLAGS.weight_initialization_scale),
+                    FLAGS.weight_init](FLAGS.weight_init_scale),
                 weight_regularizer= WEIGHT_REGULARIZER_DICT[
-                    FLAGS.weight_regularizer](FLAGS.weight_regularizer_strength)
+                    FLAGS.weight_reg](FLAGS.weight_reg_strength)
                 )
     logits = model.inference(x_pl)
     loss = model.loss(logits, y_pl)
@@ -149,14 +149,15 @@ def train():
       for step in range(FLAGS.max_steps):
         x_batch, y_batch = train_set.next_batch(FLAGS.batch_size)
         feed = {x_pl: np.reshape(x_batch, (FLAGS.batch_size, 3072)),
-                y_pl: y_batch}
-        model.is_training = True
+                y_pl: y_batch,
+                model.is_training: False}
         sess.run([train_op], feed_dict=feed)
 
         if step % 100 == 0:
           feed = {x_pl: np.reshape(X_test, (X_test.shape[0], 3072)),
-                  y_pl: Y_train}
-          model.is_training = False
+                  y_pl: Y_test,
+                  model.is_training: False}
+
           test_err, test_acc = sess.run([loss, acc], feed_dict=feed)
           print('iteration ' + str(step) +
                 ' test error: ' + str(test_err) +
