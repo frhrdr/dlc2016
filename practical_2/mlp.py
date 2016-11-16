@@ -97,9 +97,9 @@ class MLP(object):
                                 shape=[in_dim, out_dim], dtype=tf.float32,
                                 initializer=self.weight_initializer,
                                 collections=[tf.GraphKeys.VARIABLES, tf.GraphKeys.WEIGHTS])
-      biases = tf.get_variable(name=name + '_b', dtype=tf.float32,
-                               initializer=(tf.random_normal([out_dim], mean=0)))
-      lin = self.activation_fn(tf.matmul(in_tensor, weights) + biases)
+      biases = tf.get_variable(name=name + '_b', shape=[out_dim], dtype=tf.float32,
+                               initializer=tf.constant_initializer())
+      lin = tf.matmul(in_tensor, weights) + biases
       act = act_fn(lin)
 
       keep = tf.cond(self.is_training, lambda: tf.nn.dropout(act, 1 - self.dropout_rate), lambda: act)
@@ -115,9 +115,10 @@ class MLP(object):
     last = x
     in_dim = x.get_shape()[1]
     for idx, out_dim in enumerate(self.n_hidden):
+      print('making layer with in:', str(in_dim), ' out:', str(out_dim))
       last = make_layer(last, in_dim, out_dim, self.activation_fn, 'l' + str(idx))
       in_dim = out_dim
-
+    print('making lin layer with in:', str(in_dim), ' out:', str(self.n_classes))
     logits = make_layer(last, in_dim, self.n_classes, lambda t: t, 'lin')
     ########################
     # END OF YOUR CODE    #
@@ -151,8 +152,12 @@ class MLP(object):
     # PUT YOUR CODE HERE  #
     #######################
     ce_loss = tf.nn.softmax_cross_entropy_with_logits(logits, labels)
-    reg_loss = tf.contrib.layers.apply_regularization(self.weight_regularizer)
-    loss = ce_loss + reg_loss
+    ce_loss = tf.reduce_mean(ce_loss)
+    reg_losses = [self.weight_regularizer(k) for k in tf.get_collection(tf.GraphKeys.WEIGHTS)]
+    reg_loss = tf.to_float(0.)
+    if None not in reg_losses:  # this IS meant to switch while building the graph
+      reg_loss = reduce(lambda x, y: tf.add(x, y), reg_losses)
+    loss = tf.add(ce_loss, reg_loss)
 
     tf.scalar_summary('ce_loss', ce_loss)
     tf.scalar_summary('reg_loss', reg_loss)
@@ -187,7 +192,7 @@ class MLP(object):
     guesses = tf.argmax(logits, dimension=1)
     targets = tf.argmax(labels, dimension=1)
     score = tf.to_int32(tf.equal(guesses, targets))
-    accuracy = tf.reduce_sum(score) / tf.to_float(tf.size(score))
+    accuracy = tf.reduce_sum(score) / tf.size(score)
     ########################
     # END OF YOUR CODE    #
     #######################

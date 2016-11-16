@@ -19,13 +19,13 @@ LEARNING_RATE_DEFAULT = 2e-3
 WEIGHT_REGULARIZER_STRENGTH_DEFAULT = 0.
 WEIGHT_INITIALIZATION_SCALE_DEFAULT = 1e-4
 BATCH_SIZE_DEFAULT = 200
-MAX_STEPS_DEFAULT = 1500
+MAX_STEPS_DEFAULT = 500  # 1500
 DROPOUT_RATE_DEFAULT = 0.
 DNN_HIDDEN_UNITS_DEFAULT = '100'
 WEIGHT_INITIALIZATION_DEFAULT = 'normal'
 WEIGHT_REGULARIZER_DEFAULT = 'l2'
 ACTIVATION_DEFAULT = 'relu'
-OPTIMIZER_DEFAULT = 'sgd'
+OPTIMIZER_DEFAULT = 'sgd'  # 'sgd'
 ### --- END default constants---
 
 # Directory in which cifar data is saved
@@ -49,7 +49,7 @@ WEIGHT_INITIALIZATION_DICT = {'xavier': tf.contrib.layers.xavier_initializer,  #
 # You can check the TensorFlow API at
 # https://www.tensorflow.org/versions/r0.11/api_docs/python/contrib.layers.html#regularizers
 # https://www.tensorflow.org/versions/r0.11/api_docs/python/state_ops.html#sharing-variables
-WEIGHT_REGULARIZER_DICT = {'none': None,  # No regularization
+WEIGHT_REGULARIZER_DICT = {'none': lambda x: lambda y: tf.to_float(0),  # No regularization
                            'l1': tf.contrib.layers.l1_regularizer,  # L1 regularization
                            'l2': tf.contrib.layers.l2_regularizer  # L2 regularization
                           }
@@ -71,27 +71,7 @@ OPTIMIZER_DICT = {'sgd': tf.train.GradientDescentOptimizer,  # Gradient Descent
                   }
 
 FLAGS = None
-# flags = tf.app.flags
-# FLAGS = flags.FLAGS
 
-# flags.DEFINE_float('learning_rate', LEARNING_RATE_DEFAULT, 'learning_rate')
-# flags.DEFINE_float('weight_reg_strength', WEIGHT_REGULARIZER_STRENGTH_DEFAULT, 'weight_regularizer_strength')
-# flags.DEFINE_float('weight_init_scale', WEIGHT_INITIALIZATION_SCALE_DEFAULT, 'weight_initialization_scale')
-# flags.DEFINE_integer('batch_size', BATCH_SIZE_DEFAULT, 'batch_size')
-# flags.DEFINE_integer('max_steps', MAX_STEPS_DEFAULT, 'max_steps')
-# flags.DEFINE_float('dropout_rate', DROPOUT_RATE_DEFAULT, 'dropout_rate')
-# flags.DEFINE_string('dnn_hidden_units', DNN_HIDDEN_UNITS_DEFAULT, 'dnn_hidden_units')
-# flags.DEFINE_string('weight_init', WEIGHT_INITIALIZATION_DEFAULT, 'weight_initialization')
-# flags.DEFINE_string('weight_reg', WEIGHT_REGULARIZER_DEFAULT, 'weight_regularizer')
-# flags.DEFINE_string('activation', ACTIVATION_DEFAULT, 'activation')
-# flags.DEFINE_string('optimizer', OPTIMIZER_DEFAULT, 'optimizer')
-#
-# flags.DEFINE_string('data_dir', DATA_DIR_DEFAULT, 'data_dir')
-# flags.DEFINE_string('log_dir', LOG_DIR_DEFAULT, 'log_dir')
-
-# for convienience
-# flags.DEFINE_integer('num_classes', 10, 'number of classes')
-# flags.DEFINE_integer('data_dim', 32 * 32 * 3, 'dimensionality of flattened data')
 
 def train():
   """
@@ -115,20 +95,22 @@ def train():
   # PUT YOUR CODE HERE  #
   #######################
   # load and prep data
+  n_classes = 10
+  n_data_dims = 3072
   data = load_cifar10(FLAGS.data_dir)
   X_train, Y_train, X_test, Y_test = preprocess_cifar10_data(*data)
-  Y_train = dense_to_one_hot(Y_train, 10)
-  Y_test = dense_to_one_hot(Y_test, 10)
+  Y_train = dense_to_one_hot(Y_train, n_classes)
+  Y_test = dense_to_one_hot(Y_test, n_classes)
   train_set = DataSet(X_train, Y_train)
-
+  test_set = DataSet(X_test, Y_test)
   # build model
   with tf.Graph().as_default():
 
-    x_pl = tf.placeholder(tf.float32, shape=(FLAGS.batch_size, 3072))
-    y_pl = tf.placeholder(tf.int32, shape=(FLAGS.batch_size, 3072))
+    x_pl = tf.placeholder(tf.float32, shape=(FLAGS.batch_size, n_data_dims))
+    y_pl = tf.placeholder(tf.int32, shape=(FLAGS.batch_size, n_classes))
     model = MLP(n_hidden=dnn_hidden_units,
-                n_classes=10,
-                is_training=True,
+                n_classes=n_classes,
+                is_training=tf.placeholder(tf.bool),
                 activation_fn=ACTIVATION_DICT[FLAGS.activation],
                 dropout_rate=FLAGS.dropout_rate,
                 weight_initializer=WEIGHT_INITIALIZATION_DICT[
@@ -143,24 +125,37 @@ def train():
     acc = model.accuracy(logits, y_pl)
     # run model
     with tf.Session() as sess:
-      init_op = tf.initialize_local_variables()
+      init_op = tf.initialize_all_variables()
       sess.run(init_op)
 
       for step in range(FLAGS.max_steps):
         x_batch, y_batch = train_set.next_batch(FLAGS.batch_size)
-        feed = {x_pl: np.reshape(x_batch, (FLAGS.batch_size, 3072)),
+        feed = {x_pl: np.reshape(x_batch, (FLAGS.batch_size, n_data_dims)),
                 y_pl: y_batch,
-                model.is_training: False}
-        sess.run([train_op], feed_dict=feed)
+                model.is_training: True}
+        _, train_err, train_acc = sess.run([train_op, loss, acc], feed_dict=feed)
 
         if step % 100 == 0:
-          feed = {x_pl: np.reshape(X_test, (X_test.shape[0], 3072)),
-                  y_pl: Y_test,
-                  model.is_training: False}
+          epoch = test_set.epochs_completed
+          batch_count = 0.
+          test_err = 0.
+          test_acc = 0.
+          while epoch == test_set.epochs_completed:
+            x_batch, y_batch = test_set.next_batch(FLAGS.batch_size)
+            feed = {x_pl: np.reshape(x_batch, (FLAGS.batch_size, n_data_dims)),
+                    y_pl: y_batch,
+                    model.is_training: False}
 
-          test_err, test_acc = sess.run([loss, acc], feed_dict=feed)
+            batch_err, batch_acc = sess.run([loss, acc], feed_dict=feed)
+            batch_count += 1.
+            test_err += batch_err
+            test_acc += batch_acc
+          test_err /= batch_count
+          test_acc /= batch_count
           print('iteration ' + str(step) +
-                ' test error: ' + str(test_err) +
+                ' \n train error: ' + str(train_err) +
+                ' train accuracy: ' + str(train_acc) +
+                ' \n test error: ' + str(test_err) +
                 ' test accuracy: ' + str(test_acc))
 
 
