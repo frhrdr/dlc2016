@@ -41,9 +41,9 @@ LOG_DIR_DEFAULT = './logs/cifar10'
 # You can check the TensorFlow API at
 # https://www.tensorflow.org/versions/r0.11/api_docs/python/contrib.layers.html#initializers
 # https://www.tensorflow.org/versions/r0.11/api_docs/python/state_ops.html#sharing-variables
-WEIGHT_INITIALIZATION_DICT = {'xavier': tf.contrib.layers.xavier_initializer,  # Xavier initialisation
-                              'normal': tf.random_normal_initializer,  # Initialization from a standard normal
-                              'uniform': tf.random_uniform_initializer,  # Initialization from a uniform distribution
+WEIGHT_INITIALIZATION_DICT = {'xavier': lambda x: tf.contrib.layers.xavier_initializer(),  # Xavier initialisation
+                              'normal': lambda x: tf.random_normal_initializer(stddev=x),  # Initialization from a standard normal
+                              'uniform': lambda x: tf.random_uniform_initializer(minval=- x / 2., maxval=x / 2.),  # Initialization from a uniform distribution
                              }
 
 # You can check the TensorFlow API at
@@ -99,6 +99,7 @@ def train():
   n_data_dims = 3072
   data = load_cifar10(FLAGS.data_dir)
   X_train, Y_train, X_test, Y_test = preprocess_cifar10_data(*data)
+  # X_train, Y_train, X_test, Y_test = load_cifar10(FLAGS.data_dir)
   Y_train = dense_to_one_hot(Y_train, n_classes)
   Y_test = dense_to_one_hot(Y_test, n_classes)
   train_set = DataSet(X_train, Y_train)
@@ -107,7 +108,8 @@ def train():
   with tf.Graph().as_default():
 
     x_pl = tf.placeholder(tf.float32, shape=(FLAGS.batch_size, n_data_dims))
-    y_pl = tf.placeholder(tf.int32, shape=(FLAGS.batch_size, n_classes))
+    y_pl = tf.placeholder(tf.float32, shape=(FLAGS.batch_size, n_classes))
+
     model = MLP(n_hidden=dnn_hidden_units,
                 n_classes=n_classes,
                 is_training=tf.placeholder(tf.bool),
@@ -134,7 +136,7 @@ def train():
                 y_pl: y_batch,
                 model.is_training: True}
         _, train_err, train_acc = sess.run([train_op, loss, acc], feed_dict=feed)
-
+        # train_err, train_acc = sess.run([loss, acc], feed_dict=feed)
         if step % 100 == 0:
           epoch = test_set.epochs_completed
           batch_count = 0.
@@ -147,9 +149,11 @@ def train():
                     model.is_training: False}
 
             batch_err, batch_acc = sess.run([loss, acc], feed_dict=feed)
+
             batch_count += 1.
             test_err += batch_err
             test_acc += batch_acc
+
           test_err /= batch_count
           test_acc /= batch_count
           print('iteration ' + str(step) +

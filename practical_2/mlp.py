@@ -98,7 +98,7 @@ class MLP(object):
                                 initializer=self.weight_initializer,
                                 collections=[tf.GraphKeys.VARIABLES, tf.GraphKeys.WEIGHTS])
       biases = tf.get_variable(name=name + '_b', shape=[out_dim], dtype=tf.float32,
-                               initializer=tf.constant_initializer())
+                               initializer=tf.constant_initializer(0.))
       lin = tf.matmul(in_tensor, weights) + biases
       act = act_fn(lin)
 
@@ -151,6 +151,7 @@ class MLP(object):
     ########################
     # PUT YOUR CODE HERE  #
     #######################
+
     ce_loss = tf.nn.softmax_cross_entropy_with_logits(logits, labels)
     ce_loss = tf.reduce_mean(ce_loss)
     reg_losses = [self.weight_regularizer(k) for k in tf.get_collection(tf.GraphKeys.WEIGHTS)]
