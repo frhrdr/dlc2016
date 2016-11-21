@@ -107,7 +107,7 @@ class MLP(object):
       tf.histogram_summary(name + '/w', weights)
       tf.histogram_summary(name + '/b', biases)
       tf.histogram_summary(name + '/lin_act', lin)
-      tf.histogram_summary(name + '/nln_act', act)
+      tf.histogram_summary(name + '/nonlin_act', act)
       tf.histogram_summary(name + '/kept', keep)
 
       return keep
@@ -115,10 +115,8 @@ class MLP(object):
     last = x
     in_dim = x.get_shape()[1]
     for idx, out_dim in enumerate(self.n_hidden):
-      print('making layer with in:', str(in_dim), ' out:', str(out_dim))
-      last = make_layer(last, in_dim, out_dim, self.activation_fn, 'l' + str(idx))
+      last = make_layer(last, in_dim, out_dim, self.activation_fn, 'layer_' + str(idx))
       in_dim = out_dim
-    print('making lin layer with in:', str(in_dim), ' out:', str(self.n_classes))
     logits = make_layer(last, in_dim, self.n_classes, lambda t: t, 'lin')
     ########################
     # END OF YOUR CODE    #
@@ -194,6 +192,8 @@ class MLP(object):
     targets = tf.argmax(labels, dimension=1)
     score = tf.to_int32(tf.equal(guesses, targets))
     accuracy = tf.reduce_sum(score) / tf.size(score)
+
+    tf.scalar_summary('accuracy', accuracy)
     ########################
     # END OF YOUR CODE    #
     #######################

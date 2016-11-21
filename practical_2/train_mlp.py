@@ -125,8 +125,13 @@ def train():
     train_op = OPTIMIZER_DICT[FLAGS.optimizer](FLAGS.learning_rate).minimize(loss)
 
     acc = model.accuracy(logits, y_pl)
-    # run model
+
+    summary_op = tf.merge_all_summaries()
+
     with tf.Session() as sess:
+
+      train_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/train', sess.graph)
+      test_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/test', sess.graph)
       init_op = tf.initialize_all_variables()
       sess.run(init_op)
 
@@ -135,8 +140,11 @@ def train():
         feed = {x_pl: np.reshape(x_batch, (FLAGS.batch_size, n_data_dims)),
                 y_pl: y_batch,
                 model.is_training: True}
-        _, train_err, train_acc = sess.run([train_op, loss, acc], feed_dict=feed)
-        # train_err, train_acc = sess.run([loss, acc], feed_dict=feed)
+        _, train_err, train_acc, summary_str = sess.run([train_op, loss, acc, summary_op], feed_dict=feed)
+
+        train_summary_writer.add_summary(summary_str, step)
+        train_summary_writer.flush()
+
         if step % 100 == 0:
           epoch = test_set.epochs_completed
           batch_count = 0.
@@ -162,6 +170,9 @@ def train():
                 ' \n test error: ' + str(test_err) +
                 ' test accuracy: ' + str(test_acc))
 
+          summary_str = sess.run(summary_op, feed_dict=feed)
+          test_summary_writer.add_summary(summary_str, step)
+          test_summary_writer.flush()
 
   ########################
   # END OF YOUR CODE    #
