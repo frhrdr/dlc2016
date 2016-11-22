@@ -101,7 +101,6 @@ class MLP(object):
                                initializer=tf.constant_initializer(0.))
       lin = tf.matmul(in_tensor, weights) + biases
       act = act_fn(lin)
-
       keep = tf.cond(self.is_training, lambda: tf.nn.dropout(act, 1 - self.dropout_rate), lambda: act)
 
       tf.histogram_summary(name + '/w', weights)
