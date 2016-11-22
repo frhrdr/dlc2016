@@ -145,7 +145,7 @@ def train():
         train_summary_writer.add_summary(summary_str, step)
         train_summary_writer.flush()
 
-        if step % 100 == 0:
+        if step == 0 or (step + 1) % 100 == 0:
           epoch = test_set.epochs_completed
           batch_count = 0.
           test_err = 0.
