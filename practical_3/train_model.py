@@ -35,7 +35,8 @@ def train_step(loss):
     ########################
     # PUT YOUR CODE HERE  #
     ########################
-    raise NotImplementedError
+    opt_dict = {'ADAM': tf.train.AdamOptimizer}
+    train_op = opt_dict[FLAGS.optimizer](FLAGS.learning_rate).minimize(loss)
     ########################
     # END OF YOUR CODE    #
     ########################
@@ -156,6 +157,7 @@ def feature_extraction():
     # END OF YOUR CODE    #
     ########################
 
+
 def initialize_folders():
     """
     Initializes all folders in FLAGS variable.
@@ -218,7 +220,8 @@ if __name__ == '__main__':
                       help='Training or feature extraction')
     parser.add_argument('--train_model', type = str, default = 'linear',
                       help='Type of model. Possible options: linear and siamese')
-
+    parser.add_argument('--optimizer', type = str, default = OPTIMIZER_DEFAULT,
+                        help='Optimizer to use [ADAM].')
     FLAGS, unparsed = parser.parse_known_args()
 
     tf.app.run()

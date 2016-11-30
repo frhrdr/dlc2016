@@ -55,7 +55,59 @@ class ConvNet(object):
             ########################
             # PUT YOUR CODE HERE  #
             ########################
-            raise NotImplementedError
+
+            # Block name	Elements	Kernel Size	Filter depth	Output depth	Stride
+            #               Convolution	[5, 5]	    3   	        64	            [1, 1]
+            # conv1	        ReLU
+            #               Max-pool	[3, 3]	    None   	        None	        [2, 2]
+            with tf.name_scope('conv1'):
+                f1 = tf.get_variable('f1', shape=[5, 5, 3, 64], dtype=tf.float32,
+                                     initializer=None, regularizer=None)
+                c1 = tf.nn.conv2d(x, f1, strides=[1, 1, 1, 1], padding='VALID')
+                r1 = tf.nn.relu(c1)
+                o1 = tf.nn.max_pool(r1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID')
+
+            #               Convolution	[5, 5]	    64	            64	            [1, 1]
+            # conv2	        ReLU
+            #               Max-pool	[3, 3]	    None	        None	        [2, 2]
+            with tf.name_scope('conv2'):
+                f2 = tf.get_variable('f2', shape=[5, 5, 64, 64], dtype=tf.float32,
+                                     initializer=None, regularizer=None)
+                c2 = tf.nn.conv2d(o1, f2, strides=[1, 1, 1, 1], padding='VALID')
+                r2 = tf.nn.relu(c2)
+                o2 = tf.nn.max_pool(r2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID')
+
+            # flatten	Flatten
+            o3 = tf.contrib.layers.flatten(o2)
+
+            # fc1	        Multiplication	[dim(conv2), 384]
+            #               ReLU
+            with tf.name_scope('dense1'):
+                w1 = tf.get_variable('w1', shape=[o3.get_shape()[1], 384], dtype=tf.float32,
+                                     initializer=None, regularizer=None)
+                b1 = tf.get_variable('b1', shape=[384], dtype=tf.float32,
+                                     initializer=None, regularizer=None)
+                o4 = tf.nn.relu(tf.matmul(o3, w1) + b1)
+
+            # fc2	        Multiplication	[384, 192]
+            #               ReLU
+            with tf.name_scope('dense2'):
+                w2 = tf.get_variable('w2', shape=[384, 192], dtype=tf.float32,
+                                     initializer=None, regularizer=None)
+                b2 = tf.get_variable('b2', shape=[192], dtype=tf.float32,
+                                     initializer=None, regularizer=None)
+                o5 = tf.nn.relu(tf.matmul(o4, w2) + b2)
+
+            # fc3	        Multiplication	[192, 10]
+            with tf.name_scope('dense2'):
+                w3 = tf.get_variable('w2', shape=[192, self.n_classes], dtype=tf.float32,
+                                     initializer=None, regularizer=None)
+                b3 = tf.get_variable('b2', shape=[self.n_classes], dtype=tf.float32,
+                                     initializer=None, regularizer=None)
+                o6 = tf.matmul(o5, w3) + b3
+
+            #               Softmax
+            logits = o6  # logits are made without actual softmaxing, right?
             ########################
             # END OF YOUR CODE    #
             ########################
@@ -82,7 +134,12 @@ class ConvNet(object):
         ########################
         # PUT YOUR CODE HERE  #
         ########################
-        raise NotImplementedError
+        guesses = tf.argmax(logits, dimension=1)
+        targets = tf.argmax(labels, dimension=1)
+        score = tf.to_int32(tf.equal(guesses, targets))
+        accuracy = tf.reduce_sum(score) / tf.size(score)
+
+        tf.scalar_summary('accuracy', accuracy)
         ########################
         # END OF YOUR CODE    #
         ########################
@@ -113,7 +170,17 @@ class ConvNet(object):
         ########################
         # PUT YOUR CODE HERE  #
         ########################
-        raise NotImplementedError
+        ce_loss = tf.nn.softmax_cross_entropy_with_logits(logits, labels)
+        ce_loss = tf.reduce_mean(ce_loss)
+        # reg_losses = [self.weight_regularizer(k) for k in tf.get_collection(tf.GraphKeys.WEIGHTS)]
+        # reg_loss = tf.to_float(0.)
+        # if None not in reg_losses:  # this IS meant to switch while building the graph
+        #   reg_loss = reduce(lambda x, y: tf.add(x, y), reg_losses)
+        # loss = tf.add(ce_loss, reg_loss)
+        loss = ce_loss
+        # tf.scalar_summary('ce_loss', ce_loss)
+        # tf.scalar_summary('reg_loss', reg_loss)
+        tf.scalar_summary('full_loss', loss)
         ########################
         # END OF YOUR CODE    #
         ########################
