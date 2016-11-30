@@ -1,8 +1,8 @@
 #!/bin/bash
-echo "ex-1"
+#echo "ex-1"
 #python train_mlp.py --learning_rate 1e-3 --weight_init normal --weight_init_scale 1e-5 --weight_reg none --log_dir ./logs/cifar10/inits/norm5
 #python train_mlp.py --learning_rate 1e-3 --weight_init normal --weight_init_scale 1e-4 --weight_reg none --log_dir ./logs/cifar10/inits/norm4
-python train_mlp.py --learning_rate 1e-3 --weight_init normal --weight_init_scale 1e-3 --weight_reg none --log_dir ./logs/cifar10/inits/norm3
+#python train_mlp.py --learning_rate 1e-3 --weight_init normal --weight_init_scale 1e-3 --weight_reg none --log_dir ./logs/cifar10/inits/norm3
 #python train_mlp.py --learning_rate 1e-3 --weight_init normal --weight_init_scale 1e-2 --weight_reg none --log_dir ./logs/cifar10/inits/norm2
 #python train_mlp.py --learning_rate 1e-3 --weight_init uniform --weight_init_scale 2e-5 --weight_reg none --log_dir ./logs/cifar10/inits/unif5
 #python train_mlp.py --learning_rate 1e-3 --weight_init uniform --weight_init_scale 2e-4 --weight_reg none --log_dir ./logs/cifar10/inits/unif4
@@ -26,6 +26,5 @@ python train_mlp.py --learning_rate 1e-3 --weight_init normal --weight_init_scal
 #python train_mlp.py --learning_rate 1e-3 --dnn_hidden_units 300,300 --activation relu --weight_init normal --weight_init_scale 1e-3 --optimizer rmsprop --weight_reg none --log_dir ./logs/cifar10/opts/rmsprop
 #python train_mlp.py --learning_rate 1e-3 --dnn_hidden_units 300,300 --activation relu --weight_init normal --weight_init_scale 1e-3 --optimizer sgd --weight_reg none --log_dir ./logs/cifar10/opts/sgd
 #echo "ex-5"
-#python train_mlp.py --dnn_hidden_units 400 --learning_rate 1e-3 --weight_reg l2 \
-#--max_steps 3500 --batch_size 200 --dropout_rate 0. --activation elu --weight_init_scale 1e-3 \
-#--weight_init normal --optimizer adagrad --weight_reg_strength 0.2 --log_dir ./logs/cifar10/topmodel
+python train_mlp.py --dnn_hidden_units 800 --learning_rate 1e-3 --weight_reg l2 --max_steps 3500 --batch_size 200 --dropout_rate 0. --activation elu --weight_init_scale 1e-3 --weight_init normal --optimizer adagrad --dropout_rate 0.5 --weight_reg_strength 0.2 --log_dir ./logs/cifar10/tiptop
+#python train_mlp.py --learning_rate 1e-3 --dnn_hidden_units 600,400 --activation relu --weight_init xavier --weight_init_scale 1e-3 --optimizer adagrad --weight_reg l2 --weight_reg_scale 0.01 --dropout_rate 0.5 --log_dir ./logs/cifar10/tiptop
