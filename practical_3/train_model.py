@@ -7,6 +7,8 @@ import os
 
 import tensorflow as tf
 import numpy as np
+import cifar10_utils
+from convnet import ConvNet
 
 LEARNING_RATE_DEFAULT = 1e-4
 BATCH_SIZE_DEFAULT = 128
@@ -81,7 +83,36 @@ def train():
     ########################
     # PUT YOUR CODE HERE  #
     ########################
-    raise NotImplementedError
+    cifar10 = cifar10_utils.get_cifar10('cifar10/cifar10-10-batches-py')
+    cnn = ConvNet()
+    data_dims = list(cifar10.train.data.shape[1:])
+    num_classes = list(cifar10.train.target.shape[1])
+    with tf.Graph().as_default():
+        x_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
+        y_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size, num_classes])
+
+        logits = cnn.inference(x_pl)
+        loss = cnn.loss(logits, y_pl)
+        train_op = train_step(loss)
+
+        with tf.Session() as sess:
+
+            sess.run(tf.initialize_all_tables())
+            train_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/train', sess.graph)
+            test_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/test', sess.graph)
+
+            for step in range(FLAGS.max_steps):
+                x, y = cifar10.train.next_batch(FLAGS.batch_size)
+                feed = {x_pl: x, y_pl: y}
+                err, _ = sess.run([loss, train_op], feed_dict=feed)
+
+                if step == 0 or (step + 1) % FLAGS.print_freq == 0 or step + 1 == FLAGS.max_steps:
+                    pass
+                if step == 0 or (step + 1) % FLAGS.eval_freq == 0 or step + 1 == FLAGS.max_steps:
+                    pass
+                if (step + 1) % FLAGS.checkpoint_freq == 0 or step + 1 == FLAGS.max_steps:
+                    pass
+
     ########################
     # END OF YOUR CODE    #
     ########################
