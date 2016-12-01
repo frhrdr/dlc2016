@@ -36,9 +36,7 @@ def train_step(loss):
     """
     ########################
     # PUT YOUR CODE HERE  #
-    ########################
-    opt_dict = {'ADAM': tf.train.AdamOptimizer}
-    train_op = opt_dict[FLAGS.optimizer](FLAGS.learning_rate).minimize(loss)
+    train_op = tf.train.AdamOptimizer(FLAGS.learning_rate).minimize(loss)
     ########################
     # END OF YOUR CODE    #
     ########################
@@ -93,6 +91,7 @@ def train():
 
         logits = cnn.inference(x_pl)
         loss = cnn.loss(logits, y_pl)
+        acc = cnn.accuracy(logits, y_pl)
         train_op = train_step(loss)
 
         with tf.Session() as sess:
@@ -109,7 +108,25 @@ def train():
                 if step == 0 or (step + 1) % FLAGS.print_freq == 0 or step + 1 == FLAGS.max_steps:
                     pass
                 if step == 0 or (step + 1) % FLAGS.eval_freq == 0 or step + 1 == FLAGS.max_steps:
-                    pass
+                    x, y = cifar10.test.images, cifar10.test.labels
+                    num_batches = int(np.floor(x.shape[0] / FLAGS.batch_size))
+
+                    test_err = 0.
+                    test_acc = 0.
+                    for idx in range(num_batches):
+
+                        x_batch = x[idx * FLAGS.batch_size:(idx + 1) * FLAGS.batch_size, :, :, :]
+                        y_batch = y[idx * FLAGS.batch_size:(idx + 1) * FLAGS.batch_size, :]
+                        feed = {x_pl: x_batch, y_pl: y_batch}
+
+                        batch_err, batch_acc = sess.run([loss, acc], feed_dict=feed)
+
+                        test_err += batch_err
+                        test_acc += batch_acc
+
+                    test_err /= num_batches
+                    test_acc /= num_batches
+
                 if (step + 1) % FLAGS.checkpoint_freq == 0 or step + 1 == FLAGS.max_steps:
                     pass
 
@@ -251,8 +268,7 @@ if __name__ == '__main__':
                       help='Training or feature extraction')
     parser.add_argument('--train_model', type = str, default = 'linear',
                       help='Type of model. Possible options: linear and siamese')
-    parser.add_argument('--optimizer', type = str, default = OPTIMIZER_DEFAULT,
-                        help='Optimizer to use [ADAM].')
     FLAGS, unparsed = parser.parse_known_args()
 
     tf.app.run()
+    ########################
