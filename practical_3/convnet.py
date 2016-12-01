@@ -101,10 +101,10 @@ class ConvNet(object):
                 o5 = tf.nn.relu(tf.matmul(o4, w2) + b2)
 
             # fc3	        Multiplication	[192, 10]
-            with tf.name_scope('dense2'):
-                w3 = tf.get_variable('w2', shape=[192, self.n_classes], dtype=tf.float32,
+            with tf.name_scope('dense3'):
+                w3 = tf.get_variable('w3', shape=[192, self.n_classes], dtype=tf.float32,
                                      initializer=xavier, regularizer=l2_reg)
-                b3 = tf.get_variable('b2', shape=[self.n_classes], dtype=tf.float32,
+                b3 = tf.get_variable('b3', shape=[self.n_classes], dtype=tf.float32,
                                      initializer=const0)
                 o6 = tf.matmul(o5, w3) + b3
 
