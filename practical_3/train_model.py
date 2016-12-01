@@ -94,8 +94,8 @@ def train():
         train_op = train_step(loss)
 
         with tf.Session() as sess:
-            print(tf.get_collection(tf.GraphKeys.VARIABLES))
-            sess.run(tf.initialize_all_tables())
+            # print([k.name for k in tf.get_collection(tf.GraphKeys.VARIABLES)])
+            sess.run(tf.initialize_all_variables())
             train_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/train', sess.graph)
             test_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/test', sess.graph)
 
