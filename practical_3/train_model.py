@@ -84,10 +84,9 @@ def train():
     cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
     cnn = ConvNet()
     data_dims = list(cifar10.train.images.shape[1:])
-    num_classes = list(cifar10.train.labels.shape[1])
     with tf.Graph().as_default():
         x_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
-        y_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size, num_classes])
+        y_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size, cnn.n_classes])
 
         logits = cnn.inference(x_pl)
         loss = cnn.loss(logits, y_pl)
