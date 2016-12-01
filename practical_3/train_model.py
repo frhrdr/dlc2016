@@ -84,7 +84,6 @@ def train():
     cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
     cnn = ConvNet()
     data_dims = list(cifar10.train.images.shape[1:])
-    print('data_dims: ', data_dims)
     with tf.Graph().as_default():
         x_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
         y_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size, cnn.n_classes])
@@ -95,7 +94,7 @@ def train():
         train_op = train_step(loss)
 
         with tf.Session() as sess:
-
+            print(tf.get_collection(tf.GraphKeys.VARIABLES))
             sess.run(tf.initialize_all_tables())
             train_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/train', sess.graph)
             test_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/test', sess.graph)
