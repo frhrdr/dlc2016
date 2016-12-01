@@ -81,7 +81,7 @@ def train():
     ########################
     # PUT YOUR CODE HERE  #
     ########################
-    cifar10 = cifar10_utils.get_cifar10('cifar10/cifar10-10-batches-py')
+    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
     cnn = ConvNet()
     data_dims = list(cifar10.train.data.shape[1:])
     num_classes = list(cifar10.train.target.shape[1])
