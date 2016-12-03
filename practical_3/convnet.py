@@ -81,8 +81,8 @@ class ConvNet(object):
 
             # flatten	Flatten
             # o3 = tf.contrib.layers.flatten(o2)
-            shape_list = o2.get_shape().as_list()
-            o3 = tf.reshape(o2, [shape_list[0], -1], name='flat_out')
+            o3 = tf.reshape(o2, [o2.get_shape()[0].value, -1], name='flat_out')
+
             # fc1	        Multiplication	[dim(conv2), 384]
             #               ReLU
             with tf.name_scope('dense1'):

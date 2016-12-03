@@ -97,7 +97,7 @@ def train():
         init_op = tf.initialize_all_variables()
 
         with tf.Session() as sess:
-            # print([k.name for k in tf.get_collection(tf.GraphKeys.VARIABLES)])
+            saver = tf.train.Saver()
             sess.run(init_op)
             train_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/train', sess.graph)
             test_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/test', sess.graph)
@@ -136,7 +136,8 @@ def train():
                     test_summary_writer.add_summary(summary_str, step)
                     test_summary_writer.flush()
                 if (step + 1) % FLAGS.checkpoint_freq == 0 or step + 1 == FLAGS.max_steps:
-                    pass
+                    checkpoint_file = os.path.join(FLAGS.checkpoint_dir, 'ckpt')
+                    saver.save(sess, checkpoint_file, global_step=(step + 1))
 
     ########################
     # END OF YOUR CODE    #
