@@ -105,8 +105,8 @@ def train():
   train_set = DataSet(X_train, Y_train)
   test_set = DataSet(X_test, Y_test)
   # build model
-  with tf.Graph().as_default():
-
+  with tf.Graph().as_default() as graph:
+    graph.get_tensor_by_name('')
     x_pl = tf.placeholder(tf.float32, shape=(FLAGS.batch_size, n_data_dims))
     y_pl = tf.placeholder(tf.float32, shape=(FLAGS.batch_size, n_classes))
 

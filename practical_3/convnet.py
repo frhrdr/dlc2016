@@ -57,7 +57,7 @@ class ConvNet(object):
             xavier = tf.contrib.layers.xavier_initializer()
             const0 = tf.constant_initializer(0.)
             l2_reg = tf.contrib.layers.l2_regularizer(0.1)
-            pad_config = 'VALID'
+            pad_config = 'SAME'
             # Block name	Elements	Kernel Size	Filter depth	Output depth	Stride
             #               Convolution	[5, 5]	    3   	        64	            [1, 1]
             # conv1	        ReLU
@@ -80,7 +80,7 @@ class ConvNet(object):
                 o2 = tf.nn.max_pool(r2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding=pad_config)
 
             # flatten	Flatten
-            o3 = tf.contrib.layers.flatten(o2)
+            o3 = tf.contrib.layers.flatten(o2, name='flat_out')
 
             # fc1	        Multiplication	[dim(conv2), 384]
             #               ReLU
@@ -89,7 +89,7 @@ class ConvNet(object):
                                      initializer=xavier, regularizer=l2_reg)
                 b1 = tf.get_variable('b1', shape=[384], dtype=tf.float32,
                                      initializer=const0)
-                o4 = tf.nn.relu(tf.matmul(o3, w1) + b1)
+                o4 = tf.nn.relu(tf.matmul(o3, w1) + b1, name='d1_out')
 
             # fc2	        Multiplication	[384, 192]
             #               ReLU
@@ -98,7 +98,7 @@ class ConvNet(object):
                                      initializer=xavier, regularizer=l2_reg)
                 b2 = tf.get_variable('b2', shape=[192], dtype=tf.float32,
                                      initializer=const0)
-                o5 = tf.nn.relu(tf.matmul(o4, w2) + b2)
+                o5 = tf.nn.relu(tf.matmul(o4, w2) + b2, name='d2_out')
 
             # fc3	        Multiplication	[192, 10]
             with tf.name_scope('dense3'):

@@ -91,21 +91,26 @@ def train():
         logits = cnn.inference(x_pl)
         loss = cnn.loss(logits, y_pl)
         acc = cnn.accuracy(logits, y_pl)
+
         train_op = train_step(loss)
+        summary_op = tf.merge_all_summaries()
+        init_op = tf.initialize_all_variables()
 
         with tf.Session() as sess:
             # print([k.name for k in tf.get_collection(tf.GraphKeys.VARIABLES)])
-            sess.run(tf.initialize_all_variables())
+            sess.run(init_op)
             train_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/train', sess.graph)
             test_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/test', sess.graph)
 
             for step in range(FLAGS.max_steps):
                 x, y = cifar10.train.next_batch(FLAGS.batch_size)
                 feed = {x_pl: x, y_pl: y}
-                err, _ = sess.run([loss, train_op], feed_dict=feed)
+                train_loss, train_acc, summary_str, _ = sess.run([loss, acc, summary_op, train_op], feed_dict=feed)
 
                 if step == 0 or (step + 1) % FLAGS.print_freq == 0 or step + 1 == FLAGS.max_steps:
-                    print('step: ', str(step), ' err: ', str(err))
+                    print('TRAIN step: ', str(step), ' err: ', str(train_loss), ' acc: ', str(train_acc))
+                    train_summary_writer.add_summary(summary_str, step)
+                    train_summary_writer.flush()
                 if step == 0 or (step + 1) % FLAGS.eval_freq == 0 or step + 1 == FLAGS.max_steps:
                     x, y = cifar10.test.images, cifar10.test.labels
                     num_batches = int(np.floor(x.shape[0] / FLAGS.batch_size))
@@ -125,7 +130,11 @@ def train():
 
                     test_err /= num_batches
                     test_acc /= num_batches
+                    print('--- TEST --- step: ', str(step), ' err: ', str(train_loss), ' acc: ', str(train_acc))
 
+                    summary_str = sess.run(summary_op, feed_dict=feed)  # possibly incorrect. should pool summaries
+                    test_summary_writer.add_summary(summary_str, step)
+                    test_summary_writer.flush()
                 if (step + 1) % FLAGS.checkpoint_freq == 0 or step + 1 == FLAGS.max_steps:
                     pass
 
