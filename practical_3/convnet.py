@@ -80,8 +80,8 @@ class ConvNet(object):
                 o2 = tf.nn.max_pool(r2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding=pad_config)
 
             # flatten	Flatten
-            o3 = tf.contrib.layers.flatten(o2, name='flat_out')
-
+            # o3 = tf.contrib.layers.flatten(o2)
+            o3 = tf.reshape(o2, [o2.get_shape()[0], -1], name='flat_out')
             # fc1	        Multiplication	[dim(conv2), 384]
             #               ReLU
             with tf.name_scope('dense1'):
