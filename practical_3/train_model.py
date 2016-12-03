@@ -105,7 +105,7 @@ def train():
                 err, _ = sess.run([loss, train_op], feed_dict=feed)
 
                 if step == 0 or (step + 1) % FLAGS.print_freq == 0 or step + 1 == FLAGS.max_steps:
-                    pass
+                    print('step: ', str(step), ' err: ', str(err))
                 if step == 0 or (step + 1) % FLAGS.eval_freq == 0 or step + 1 == FLAGS.max_steps:
                     x, y = cifar10.test.images, cifar10.test.labels
                     num_batches = int(np.floor(x.shape[0] / FLAGS.batch_size))
