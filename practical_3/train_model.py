@@ -238,6 +238,7 @@ def feature_extraction(feature_op_name='ConvNet/dense1/d1_out', check_point_name
                 feed = {x_pl: x_batch}
 
                 batch_features = sess.run([feature_op], feed_dict=feed)
+                batch_features = np.asarray(batch_features)
                 batch_features = np.reshape(batch_features, [-1, batch_features.shape[-1]])
                 feat_list.append(batch_features)
 
