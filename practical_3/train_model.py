@@ -9,9 +9,12 @@ import tensorflow as tf
 import numpy as np
 import cifar10_utils
 from convnet import ConvNet
+from siamese import Siamese
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import LinearSVC
 from sklearn.manifold import TSNE
+from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
 
 LEARNING_RATE_DEFAULT = 1e-4
 BATCH_SIZE_DEFAULT = 128
@@ -20,6 +23,8 @@ EVAL_FREQ_DEFAULT = 1000
 CHECKPOINT_FREQ_DEFAULT = 5000
 PRINT_FREQ_DEFAULT = 10
 OPTIMIZER_DEFAULT = 'ADAM'
+
+CIFAR10_LABELS = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
 DATA_DIR_DEFAULT = './cifar10/cifar-10-batches-py'
 LOG_DIR_DEFAULT = './logs/cifar10'
@@ -142,19 +147,6 @@ def train():
                     checkpoint_file = os.path.join(FLAGS.checkpoint_dir, 'ckpt')
                     saver.save(sess, checkpoint_file, global_step=(step + 1))
 
-
-def tsne_visualize(file_name):
-    feat_x = np.load(os.path.join(FLAGS.log_dir, file_name))
-    model = TSNE()
-    model.fit_transform(feat_x)
-
-
-def n_v_1_classify(feat_file_name):
-    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
-    y = cifar10.test.labels
-    feat_x = np.load(os.path.join(FLAGS.log_dir, feat_file_name))
-    pred = OneVsRestClassifier(LinearSVC(random_state=0)).fit(feat_x, y).predict(feat_x)
-
     ########################
     # END OF YOUR CODE    #
     ########################
@@ -201,7 +193,63 @@ def train_siamese():
     ########################
     # PUT YOUR CODE HERE  #
     ########################
-    raise NotImplementedError
+    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
+    siam = Siamese()
+    data_dims = list(cifar10.train.images.shape[1:])
+    with tf.Graph().as_default():
+        x_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
+        y_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size, 10])
+
+        c1 = siam.inference(x_pl, reuse=False)
+        c2 = siam.inference(x_pl, reuse=True)
+        loss = siam.loss(c1, c2, label=batch_labels, margin=margin)
+
+        train_op = train_step(loss)
+        summary_op = tf.merge_all_summaries()
+        init_op = tf.initialize_all_variables()
+
+        with tf.Session() as sess:
+            saver = tf.train.Saver()
+            sess.run(init_op)
+            train_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/train', sess.graph)
+            test_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/test', sess.graph)
+
+            for step in range(FLAGS.max_steps):
+                x, y = cifar10.train.next_batch(FLAGS.batch_size)
+                feed = {x_pl: x, y_pl: y}
+                train_loss, summary_str, _ = sess.run([loss, summary_op, train_op], feed_dict=feed)
+
+                if step == 0 or (step + 1) % FLAGS.print_freq == 0 or step + 1 == FLAGS.max_steps:
+                    print('TRAIN step: ', str(step), ' err: ', str(train_loss))
+                    train_summary_writer.add_summary(summary_str, step)
+                    train_summary_writer.flush()
+                if step == 0 or (step + 1) % FLAGS.eval_freq == 0 or step + 1 == FLAGS.max_steps:
+                    x, y = cifar10.test.images, cifar10.test.labels
+                    num_batches = int(np.floor(x.shape[0] / FLAGS.batch_size))
+
+                    test_err = 0.
+                    test_acc = 0.
+                    for idx in range(num_batches):
+
+                        x_batch = x[idx * FLAGS.batch_size:(idx + 1) * FLAGS.batch_size, :, :, :]
+                        y_batch = y[idx * FLAGS.batch_size:(idx + 1) * FLAGS.batch_size, :]
+                        feed = {x_pl: x_batch, y_pl: y_batch}
+
+                        batch_err = sess.run([loss], feed_dict=feed)
+
+                        test_err += batch_err
+
+                    test_err /= num_batches
+                    test_acc /= num_batches
+                    print('--- TEST --- step: ', str(step), ' err: ', str(train_loss))
+
+                    summary_str = sess.run(summary_op, feed_dict=feed)  # possibly incorrect. should pool summaries
+                    test_summary_writer.add_summary(summary_str, step)
+                    test_summary_writer.flush()
+                if (step + 1) % FLAGS.checkpoint_freq == 0 or step + 1 == FLAGS.max_steps:
+                    checkpoint_file = os.path.join(FLAGS.checkpoint_dir, 'ckpt')
+                    saver.save(sess, checkpoint_file, global_step=(step + 1))
+
     ########################
     # END OF YOUR CODE    #
     ########################
@@ -264,6 +312,35 @@ def feature_extraction(check_point_name='ckpt-15000'):
             f_out = open(os.path.join(FLAGS.log_dir, file_name), 'w+')
             np.save(f_out, feat_x)
             f_out.close()
+
+
+def tsne_visualize():
+    feat_x = np.load(os.path.join(FLAGS.log_dir, FLAGS.feat_file))
+    y = np.load(os.path.join(FLAGS.log_dir, 'test_labels'))
+    y = np.argmax(y, 1)[:FLAGS.tsne_res]
+    model = TSNE()
+    proj = model.fit_transform(feat_x[:FLAGS.tsne_res, :])
+    colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'brown', 'orange', 'gray']
+
+    fig = plt.figure()
+    ax = plt.subplot(111)
+    for idx in range(int(np.max(y)) + 1):
+        x_i = proj[y == idx, :]
+        ax.scatter(x_i[:, 0], x_i[:, 1], marker='.', c=colors[idx], edgecolors=colors[idx], label=CIFAR10_LABELS[idx])
+
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.show()
+    # plt.savefig(os.path.join(FLAGS.log_dir, FLAGS.vis_feats) + '_res' + str(FLAGS.tsne_res), format='png')
+
+def n_v_1_classify():
+    feat_x = np.load(os.path.join(FLAGS.log_dir, FLAGS.feat_file))[:FLAGS.nv1_cut, :]
+    y = np.load(os.path.join(FLAGS.log_dir, 'test_labels'))[:FLAGS.nv1_cut, :]
+    y = np.argmax(y, 1)
+    pred = OneVsRestClassifier(LinearSVC(random_state=0)).fit(feat_x, y).predict(feat_x)
+    c_mat = confusion_matrix(y, pred)
+    print(c_mat)
     ########################
     # END OF YOUR CODE     #
     ########################
@@ -302,6 +379,11 @@ def main(_):
             train_siamese()
         else:
             raise ValueError("--train_model argument can be linear or siamese")
+    elif FLAGS.feat_file != '':
+        if FLAGS.tsne_res == -1:
+            n_v_1_classify()
+        else:
+            tsne_visualize()
     else:
         feature_extraction()
 
@@ -333,6 +415,12 @@ if __name__ == '__main__':
                       help='Type of model. Possible options: linear and siamese')
     parser.add_argument('--extract_op', type = str, default = 'ConvNet/dense1/d1_out',  # sorry, but this just
                       help='Name of operation for which features are extracted')        # makes things a lot cleaner
+    parser.add_argument('--feat_file', type = str, default = '',
+                      help='Name of features file to be visualized or classified')
+    parser.add_argument('--tsne_res', type = int, default = -1,
+                      help='number of test samples to be visualized')
+    parser.add_argument('--nv1_cut', type = int, default = 10000,
+                      help='number of test samples to be used in classification')
     FLAGS, unparsed = parser.parse_known_args()
 
     tf.app.run()

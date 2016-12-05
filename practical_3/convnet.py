@@ -50,14 +50,15 @@ class ConvNet(object):
                   network. These logits can then be used with loss and accuracy
                   to evaluate the model.
         """
+        xavier = tf.contrib.layers.xavier_initializer()
+        const0 = tf.constant_initializer(0.)
+        l2_reg = tf.contrib.layers.l2_regularizer(0.1)
+        pad_config = 'SAME'
         with tf.variable_scope('ConvNet'):
             ########################
             # PUT YOUR CODE HERE  #
             ########################
-            xavier = tf.contrib.layers.xavier_initializer()
-            const0 = tf.constant_initializer(0.)
-            l2_reg = tf.contrib.layers.l2_regularizer(0.1)
-            pad_config = 'SAME'
+
             # Block name	Elements	Kernel Size	Filter depth	Output depth	Stride
             #               Convolution	[5, 5]	    3   	        64	            [1, 1]
             # conv1	        ReLU
@@ -79,12 +80,11 @@ class ConvNet(object):
                 r2 = tf.nn.relu(c2)
                 o2 = tf.nn.max_pool(r2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding=pad_config)
 
+
             # flatten	Flatten
             # o3 = tf.contrib.layers.flatten(o2)
             o3 = tf.reshape(o2, [o2.get_shape()[0].value, -1], name='flat_out')
 
-            # fc1	        Multiplication	[dim(conv2), 384]
-            #               ReLU
             with tf.name_scope('dense1'):
                 w1 = tf.get_variable('w1', shape=[o3.get_shape()[1], 384], dtype=tf.float32,
                                      initializer=xavier, regularizer=l2_reg)
@@ -114,6 +114,9 @@ class ConvNet(object):
             ########################
             # END OF YOUR CODE    #
             ########################
+            #               ReLU
+            # fc1	        Multiplication	[dim(conv2), 384]
+
         return logits
 
     def accuracy(self, logits, labels):

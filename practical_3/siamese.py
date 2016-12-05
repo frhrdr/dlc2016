@@ -6,7 +6,6 @@ import tensorflow as tf
 import numpy as np
 
 
-
 class Siamese(object):
     """
     This class implements a siamese convolutional neural network in
@@ -45,7 +44,54 @@ class Siamese(object):
             ########################
             # PUT YOUR CODE HERE  #
             ########################
-            raise NotImplementedError
+            xavier = tf.contrib.layers.xavier_initializer()
+            const0 = tf.constant_initializer(0.)
+            l2_reg = tf.contrib.layers.l2_regularizer(0.1)
+            pad_config = 'SAME'
+
+            if reuse:
+                conv_scope.reuse_variables()
+
+            #               Convolution	[5, 5]	3	64	[1, 1]
+            # conv1	        ReLU
+            #               Max-pool	[3, 3]	None	None	[2, 2]
+            with tf.name_scope('conv1'):
+                f1 = tf.get_variable('f1', shape=[5, 5, 3, 64], dtype=tf.float32,
+                                     initializer=xavier, regularizer=l2_reg)
+                c1 = tf.nn.conv2d(x, f1, strides=[1, 1, 1, 1], padding=pad_config)
+                r1 = tf.nn.relu(c1)
+                o1 = tf.nn.max_pool(r1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding=pad_config)
+            #               Convolution	[5, 5]	64	64	[1, 1]
+            # conv2	        ReLU
+            #               Max-pool	[3, 3]	None	None	[2, 2]
+            with tf.name_scope('conv2'):
+                f2 = tf.get_variable('f2', shape=[5, 5, 64, 64], dtype=tf.float32,
+                                     initializer=xavier, regularizer=l2_reg)
+                c2 = tf.nn.conv2d(o1, f2, strides=[1, 1, 1, 1], padding=pad_config)
+                r2 = tf.nn.relu(c2)
+                o2 = tf.nn.max_pool(r2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding=pad_config)
+
+            # flatten	Flatten
+            o3 = tf.reshape(o2, [o2.get_shape()[0].value, -1], name='flat_out')
+
+            with tf.name_scope('dense1'):
+                w1 = tf.get_variable('w1', shape=[o3.get_shape()[1], 384], dtype=tf.float32,
+                                     initializer=xavier, regularizer=l2_reg)
+                b1 = tf.get_variable('b1', shape=[384], dtype=tf.float32,
+                                     initializer=const0)
+                o4 = tf.nn.relu(tf.matmul(o3, w1) + b1, name='d1_out')
+
+            # fc2	        Multiplication	[384, 192]
+            #               ReLU
+            with tf.name_scope('dense2'):
+                w2 = tf.get_variable('w2', shape=[384, 192], dtype=tf.float32,
+                                     initializer=xavier, regularizer=l2_reg)
+                b2 = tf.get_variable('b2', shape=[192], dtype=tf.float32,
+                                     initializer=const0)
+                o5 = tf.nn.relu(tf.matmul(o4, w2) + b2, name='d2_out')
+
+            # L2-norm	L2-normalization
+            l2_out = tf.nn.l2_normalize(o5, dim=1)
             ########################
             # END OF YOUR CODE    #
             ########################
@@ -82,7 +128,11 @@ class Siamese(object):
         ########################
         # PUT YOUR CODE HERE  #
         ########################
-        raise NotImplementedError
+        d = tf.sqrt(tf.reduce_sum((channel_1 - channel_2) * (channel_1 - channel_2), 1))
+        Y = label
+        d2 = d * d
+        loss = Y * d2 + (1 - Y) * tf.maximum(margin - d2, 0)
+
         ########################
         # END OF YOUR CODE    #
         ########################
