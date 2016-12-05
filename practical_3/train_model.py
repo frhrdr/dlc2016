@@ -9,6 +9,9 @@ import tensorflow as tf
 import numpy as np
 import cifar10_utils
 from convnet import ConvNet
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.svm import LinearSVC
+from sklearn.manifold import TSNE
 
 LEARNING_RATE_DEFAULT = 1e-4
 BATCH_SIZE_DEFAULT = 128
@@ -139,6 +142,19 @@ def train():
                     checkpoint_file = os.path.join(FLAGS.checkpoint_dir, 'ckpt')
                     saver.save(sess, checkpoint_file, global_step=(step + 1))
 
+
+def tsne_visualize(file_name):
+    feat_x = np.load(os.path.join(FLAGS.log_dir, file_name))
+    model = TSNE()
+    model.fit_transform(feat_x)
+
+
+def n_v_1_classify(feat_file_name):
+    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
+    y = cifar10.test.labels
+    feat_x = np.load(os.path.join(FLAGS.log_dir, feat_file_name))
+    pred = OneVsRestClassifier(LinearSVC(random_state=0)).fit(feat_x, y).predict(feat_x)
+
     ########################
     # END OF YOUR CODE    #
     ########################
@@ -191,7 +207,7 @@ def train_siamese():
     ########################
 
 
-def feature_extraction(feature_op_name='ConvNet/dense1/d1_out', check_point_name='ckpt-15000'):
+def feature_extraction(check_point_name='ckpt-15000'):
     """
     This method restores a TensorFlow checkpoint file (.ckpt) and rebuilds inference
     model with restored parameters. From then on you can basically use that model in
@@ -218,7 +234,7 @@ def feature_extraction(feature_op_name='ConvNet/dense1/d1_out', check_point_name
 
         x_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
         cnn.inference(x_pl)
-        feature_op = graph.get_tensor_by_name(feature_op_name + ':0')
+        feature_op = graph.get_tensor_by_name(FLAGS.extract_op + ':0')
 
         num_samples = x.shape[0]
         assert num_samples % FLAGS.batch_size == 0, 'batch_size must be chosen to divide test set without rest'
@@ -244,7 +260,7 @@ def feature_extraction(feature_op_name='ConvNet/dense1/d1_out', check_point_name
             feat_x = np.concatenate(feat_list)
             print('made feature array of dims: ', feat_x.shape)
 
-            file_name = '_'.join(feature_op_name.split('/')) + '_test_features'
+            file_name = '_'.join(FLAGS.extract_op.split('/')) + '_test_features'
             f_out = open(os.path.join(FLAGS.log_dir, file_name), 'w+')
             np.save(f_out, feat_x)
             f_out.close()
@@ -287,7 +303,7 @@ def main(_):
         else:
             raise ValueError("--train_model argument can be linear or siamese")
     else:
-        feature_extraction(FLAGS.extract_op)
+        feature_extraction()
 
 if __name__ == '__main__':
     # Command line arguments
