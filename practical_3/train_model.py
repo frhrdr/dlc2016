@@ -191,7 +191,7 @@ def train_siamese():
     ########################
 
 
-def feature_extraction():
+def feature_extraction(feature_op_name='d1_out', check_point_name='ckpt-15000'):
     """
     This method restores a TensorFlow checkpoint file (.ckpt) and rebuilds inference
     model with restored parameters. From then on you can basically use that model in
@@ -209,7 +209,39 @@ def feature_extraction():
     ########################
     # PUT YOUR CODE HERE  #
     ########################
-    raise NotImplementedError
+    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
+    x, y = cifar10.test.images, cifar10.test.labels
+    cnn = ConvNet()
+    data_dims = list(cifar10.train.images.shape[1:])
+
+    with tf.Graph().as_default() as graph:
+
+        x_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
+        cnn.inference(x_pl)
+        feature_op = graph.get_tensor_by_name(feature_op_name + ':0')
+
+        num_samples = x.shape[0]
+        assert num_samples % FLAGS.batch_size == 0, 'batch_size must be chosen to divide test set without rest'
+        num_batches = num_samples / FLAGS.batch_size
+
+        with tf.Session() as sess:
+
+            saver = tf.train.Saver()
+
+            saver.restore(sess, os.path.join(FLAGS.checkpoint_dir, check_point_name))
+            feat_list = []
+
+            for idx in range(num_batches):
+
+                x_batch = x[idx * FLAGS.batch_size:(idx + 1) * FLAGS.batch_size, :, :, :]
+                feed = {x_pl: x_batch}
+
+                batch_features = sess.run([feature_op], feed_dict=feed)
+                feat_list.append(batch_features)
+
+            feat_x = np.concatenate(feat_list)
+            file_name = feature_op_name + '_test_features'
+            np.save(os.path.join(FLAGS.log_dir, file_name), feat_x)
     ########################
     # END OF YOUR CODE    #
     ########################
@@ -249,7 +281,7 @@ def main(_):
         else:
             raise ValueError("--train_model argument can be linear or siamese")
     else:
-        feature_extraction()
+        feature_extraction(FLAGS.extract_op)
 
 if __name__ == '__main__':
     # Command line arguments
@@ -277,6 +309,8 @@ if __name__ == '__main__':
                       help='Training or feature extraction')
     parser.add_argument('--train_model', type = str, default = 'linear',
                       help='Type of model. Possible options: linear and siamese')
+    parser.add_argument('--extract_op', type = str, default = 'd1_out',                 # sorry, but this just
+                      help='Name of operation for which features are extracted')        # makes things a lot cleaner
     FLAGS, unparsed = parser.parse_known_args()
 
     tf.app.run()
