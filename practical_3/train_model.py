@@ -241,10 +241,13 @@ def feature_extraction(feature_op_name='ConvNet/dense1/d1_out', check_point_name
                 feat_list.append(batch_features)
 
             feat_x = np.concatenate(feat_list)
-            file_name = feature_op_name + '_test_features'
-            np.save(os.path.join(FLAGS.log_dir, file_name), feat_x)
+            print('made feature array of dims: ', feat_x.shape)
+
+            file_name = '_'.join(feature_op_name.split('/')) + '_test_features'
+            f_out = open(os.path.join(FLAGS.log_dir, file_name), 'w+')
+            np.save(f_out, feat_x)
     ########################
-    # END OF YOUR CODE    #
+    # END OF YOUR CODE     #
     ########################
 
 
