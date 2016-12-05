@@ -218,7 +218,7 @@ def feature_extraction(feature_op_name='d1_out', check_point_name='ckpt-15000'):
 
         x_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
         cnn.inference(x_pl)
-        feature_op = graph.get_tensor_by_name(feature_op_name + ':0')
+        feature_op = graph.get_tensor_by_name(feature_op_name)  #  + ':0'
 
         num_samples = x.shape[0]
         assert num_samples % FLAGS.batch_size == 0, 'batch_size must be chosen to divide test set without rest'
