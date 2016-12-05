@@ -273,7 +273,7 @@ def main(_):
 
     initialize_folders()
 
-    if FLAGS.is_train:
+    if eval(FLAGS.is_train):
         if FLAGS.train_model == 'linear':
             train()
         elif FLAGS.train_model == 'siamese':
