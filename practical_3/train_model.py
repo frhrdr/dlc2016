@@ -218,7 +218,7 @@ def feature_extraction(feature_op_name='d1_out', check_point_name='ckpt-15000'):
 
         x_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
         cnn.inference(x_pl)
-
+        print([n.name for n in tf.get_default_graph().as_graph_def().node])
         feature_op = graph.get_tensor_by_name(feature_op_name + ':0')
 
         num_samples = x.shape[0]
