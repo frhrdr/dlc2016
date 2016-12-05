@@ -191,7 +191,7 @@ def train_siamese():
     ########################
 
 
-def feature_extraction(feature_op_name='d1_out', check_point_name='ckpt-15000'):
+def feature_extraction(feature_op_name='dense1/d1_out', check_point_name='ckpt-15000'):
     """
     This method restores a TensorFlow checkpoint file (.ckpt) and rebuilds inference
     model with restored parameters. From then on you can basically use that model in
@@ -310,7 +310,7 @@ if __name__ == '__main__':
                       help='Training or feature extraction')
     parser.add_argument('--train_model', type = str, default = 'linear',
                       help='Type of model. Possible options: linear and siamese')
-    parser.add_argument('--extract_op', type = str, default = 'd1_out',                 # sorry, but this just
+    parser.add_argument('--extract_op', type = str, default = 'dense1/d1_out',                 # sorry, but this just
                       help='Name of operation for which features are extracted')        # makes things a lot cleaner
     FLAGS, unparsed = parser.parse_known_args()
 
