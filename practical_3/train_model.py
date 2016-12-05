@@ -223,7 +223,7 @@ def feature_extraction(feature_op_name='ConvNet/dense1/d1_out', check_point_name
 
         num_samples = x.shape[0]
         assert num_samples % FLAGS.batch_size == 0, 'batch_size must be chosen to divide test set without rest'
-        num_batches = num_samples / FLAGS.batch_size
+        num_batches = int(num_samples / FLAGS.batch_size)
 
         with tf.Session() as sess:
 
