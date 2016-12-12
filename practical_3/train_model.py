@@ -16,7 +16,8 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import LinearSVC
 from sklearn.manifold import TSNE
 from sklearn.metrics import confusion_matrix
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
+plt = None
 
 LEARNING_RATE_DEFAULT = 1e-4
 BATCH_SIZE_DEFAULT = 128
