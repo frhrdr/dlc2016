@@ -19,11 +19,11 @@ from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 
 LEARNING_RATE_DEFAULT = 1e-4
-BATCH_SIZE_DEFAULT = 1 # 128
-MAX_STEPS_DEFAULT = 10 # 15000
+BATCH_SIZE_DEFAULT = 128
+MAX_STEPS_DEFAULT = 15000
 EVAL_FREQ_DEFAULT = 1000
 CHECKPOINT_FREQ_DEFAULT = 5000
-PRINT_FREQ_DEFAULT = 1 # 10
+PRINT_FREQ_DEFAULT = 10
 OPTIMIZER_DEFAULT = 'ADAM'
 
 CIFAR10_LABELS = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
@@ -31,6 +31,7 @@ CIFAR10_LABELS = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog'
 DATA_DIR_DEFAULT = './cifar10/cifar-10-batches-py'
 LOG_DIR_DEFAULT = './logs/cifar10'
 CHECKPOINT_DIR_DEFAULT = './checkpoints'
+
 
 def train_step(loss):
     """
@@ -52,6 +53,7 @@ def train_step(loss):
     ########################
 
     return train_op
+
 
 def train():
     """
@@ -203,7 +205,7 @@ def train_siamese():
     with tf.Graph().as_default():
         c1_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
         c2_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
-        y_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size, 10])
+        y_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size])
 
         c1 = siam.inference(c1_pl, reuse=False)
         c2 = siam.inference(c2_pl, reuse=True)
@@ -228,25 +230,20 @@ def train_siamese():
                     print('TRAIN step: ', str(step), ' err: ', str(train_loss))
                     train_summary_writer.add_summary(summary_str, step)
                     train_summary_writer.flush()
+
                 if step == 0 or (step + 1) % FLAGS.eval_freq == 0 or step + 1 == FLAGS.max_steps:
-
                     test_err = 0.
-                    test_acc = 0.
                     for tup in test_set:
-
                         x1_batch, x2_batch, y_batch = tup
                         feed = {c1_pl: x1_batch, c2_pl: x2_batch, y_pl: y_batch}
-
-                        batch_err = sess.run([loss], feed_dict=feed)
+                        batch_err = sess.run([loss], feed_dict=feed)[0]
                         test_err += batch_err
-
+                        summary_str = sess.run(summary_op, feed_dict=feed)  # possibly incorrect.
+                        test_summary_writer.add_summary(summary_str, step)
                     test_err /= len(test_set)
-                    test_acc /= len(test_set)
-                    print('--- TEST --- step: ', str(step), ' err: ', str(train_loss))
-
-                    summary_str = sess.run(summary_op, feed_dict=feed)  # possibly incorrect. should pool summaries
-                    test_summary_writer.add_summary(summary_str, step)
+                    print('--- TEST --- step: ', str(step), ' err: ', str(test_err))
                     test_summary_writer.flush()
+
                 if (step + 1) % FLAGS.checkpoint_freq == 0 or step + 1 == FLAGS.max_steps:
                     checkpoint_file = os.path.join(FLAGS.checkpoint_dir, 'ckpt')
                     saver.save(sess, checkpoint_file, global_step=(step + 1))

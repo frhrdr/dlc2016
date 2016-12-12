@@ -133,7 +133,8 @@ class Siamese(object):
         Y = label
         d2 = d * d
         loss = Y * d2 + (1 - Y) * tf.maximum(margin - d2, 0)
-
+        loss = tf.reduce_mean(loss)
+        tf.scalar_summary('loss', loss)
         ########################
         # END OF YOUR CODE    #
         ########################
