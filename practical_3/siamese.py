@@ -129,10 +129,11 @@ class Siamese(object):
         # PUT YOUR CODE HERE  #
         ########################
         diff = channel_1 - channel_2
-        d = tf.sqrt(tf.reduce_sum(diff * diff, 1))
+        d2 = tf.reduce_sum(diff * diff, 1)
         Y = label
-        d2 = d * d
+        # d = tf.sqrt(d2 + 0.00000001)
         loss = Y * d2 + (1 - Y) * tf.maximum(margin - d2, 0)
+        loss = tf.Print(loss, [loss], first_n=10, message='loss: ')
         loss = tf.reduce_mean(loss)
         tf.scalar_summary('loss', loss)
         ########################
