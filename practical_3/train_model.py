@@ -347,11 +347,14 @@ def n_v_1_classify():
 def plot_confusion_matrix(cm, classes,  # taken form scikit learn
                           normalize=True,
                           title='Confusion matrix',
-                          cmap=plt.cm.Blues):
+                          cmap=None):
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
     """
+    if cmap is None:
+        cmap = plt.cm.Blues
+
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
     plt.colorbar()
