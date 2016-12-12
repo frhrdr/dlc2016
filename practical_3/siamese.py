@@ -128,7 +128,8 @@ class Siamese(object):
         ########################
         # PUT YOUR CODE HERE  #
         ########################
-        d = tf.sqrt(tf.reduce_sum((channel_1 - channel_2) * (channel_1 - channel_2), 1))
+        diff = channel_1 - channel_2
+        d = tf.sqrt(tf.reduce_sum(diff * diff, 1))
         Y = label
         d2 = d * d
         loss = Y * d2 + (1 - Y) * tf.maximum(margin - d2, 0)

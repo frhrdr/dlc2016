@@ -5,9 +5,11 @@ from __future__ import print_function
 import argparse
 import os
 
+import itertools
 import tensorflow as tf
 import numpy as np
 import cifar10_utils
+import cifar10_siamese_utils
 from convnet import ConvNet
 from siamese import Siamese
 from sklearn.multiclass import OneVsRestClassifier
@@ -17,11 +19,11 @@ from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 
 LEARNING_RATE_DEFAULT = 1e-4
-BATCH_SIZE_DEFAULT = 128
-MAX_STEPS_DEFAULT = 15000
+BATCH_SIZE_DEFAULT = 1 # 128
+MAX_STEPS_DEFAULT = 10 # 15000
 EVAL_FREQ_DEFAULT = 1000
 CHECKPOINT_FREQ_DEFAULT = 5000
-PRINT_FREQ_DEFAULT = 10
+PRINT_FREQ_DEFAULT = 1 # 10
 OPTIMIZER_DEFAULT = 'ADAM'
 
 CIFAR10_LABELS = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
@@ -193,16 +195,19 @@ def train_siamese():
     ########################
     # PUT YOUR CODE HERE  #
     ########################
-    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
+    cifar10 = cifar10_siamese_utils.get_cifar10(FLAGS.data_dir)
     siam = Siamese()
     data_dims = list(cifar10.train.images.shape[1:])
+    test_set = cifar10_siamese_utils.create_dataset(source_data=cifar10.test, num_tuples=500,
+                                                    batch_size=FLAGS.batch_size, fraction_same=0.2)
     with tf.Graph().as_default():
-        x_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
+        c1_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
+        c2_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
         y_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size, 10])
 
-        c1 = siam.inference(x_pl, reuse=False)
-        c2 = siam.inference(x_pl, reuse=True)
-        loss = siam.loss(c1, c2, label=batch_labels, margin=margin)
+        c1 = siam.inference(c1_pl, reuse=False)
+        c2 = siam.inference(c2_pl, reuse=True)
+        loss = siam.loss(c1, c2, label=y_pl, margin=0.2)
 
         train_op = train_step(loss)
         summary_op = tf.merge_all_summaries()
@@ -215,8 +220,8 @@ def train_siamese():
             test_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/test', sess.graph)
 
             for step in range(FLAGS.max_steps):
-                x, y = cifar10.train.next_batch(FLAGS.batch_size)
-                feed = {x_pl: x, y_pl: y}
+                x1, x2, y = cifar10.train.next_batch(FLAGS.batch_size)
+                feed = {c1_pl: x1, c2_pl: x2, y_pl: y}
                 train_loss, summary_str, _ = sess.run([loss, summary_op, train_op], feed_dict=feed)
 
                 if step == 0 or (step + 1) % FLAGS.print_freq == 0 or step + 1 == FLAGS.max_steps:
@@ -224,23 +229,19 @@ def train_siamese():
                     train_summary_writer.add_summary(summary_str, step)
                     train_summary_writer.flush()
                 if step == 0 or (step + 1) % FLAGS.eval_freq == 0 or step + 1 == FLAGS.max_steps:
-                    x, y = cifar10.test.images, cifar10.test.labels
-                    num_batches = int(np.floor(x.shape[0] / FLAGS.batch_size))
 
                     test_err = 0.
                     test_acc = 0.
-                    for idx in range(num_batches):
+                    for tup in test_set:
 
-                        x_batch = x[idx * FLAGS.batch_size:(idx + 1) * FLAGS.batch_size, :, :, :]
-                        y_batch = y[idx * FLAGS.batch_size:(idx + 1) * FLAGS.batch_size, :]
-                        feed = {x_pl: x_batch, y_pl: y_batch}
+                        x1_batch, x2_batch, y_batch = tup
+                        feed = {c1_pl: x1_batch, c2_pl: x2_batch, y_pl: y_batch}
 
                         batch_err = sess.run([loss], feed_dict=feed)
-
                         test_err += batch_err
 
-                    test_err /= num_batches
-                    test_acc /= num_batches
+                    test_err /= len(test_set)
+                    test_acc /= len(test_set)
                     print('--- TEST --- step: ', str(step), ' err: ', str(train_loss))
 
                     summary_str = sess.run(summary_op, feed_dict=feed)  # possibly incorrect. should pool summaries
@@ -334,6 +335,7 @@ def tsne_visualize():
     plt.show()
     # plt.savefig(os.path.join(FLAGS.log_dir, FLAGS.vis_feats) + '_res' + str(FLAGS.tsne_res), format='png')
 
+
 def n_v_1_classify():
     feat_x = np.load(os.path.join(FLAGS.log_dir, FLAGS.feat_file))[:FLAGS.nv1_cut, :]
     y = np.load(os.path.join(FLAGS.log_dir, 'test_labels'))[:FLAGS.nv1_cut, :]
@@ -341,6 +343,38 @@ def n_v_1_classify():
     pred = OneVsRestClassifier(LinearSVC(random_state=0)).fit(feat_x, y).predict(feat_x)
     c_mat = confusion_matrix(y, pred)
     print(c_mat)
+    plot_confusion_matrix(c_mat, CIFAR10_LABELS)
+
+
+def plot_confusion_matrix(cm, classes,  # taken form scikit learn
+                          normalize=True,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, cm[i, j],
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.show()
+
     ########################
     # END OF YOUR CODE     #
     ########################

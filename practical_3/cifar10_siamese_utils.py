@@ -10,7 +10,7 @@ import numpy as np
 import os
 import cPickle as pickle
 
-from six.moves import xrange
+# from six.moves import xrange
 
 import random
 from tensorflow.contrib.learn.python.learn.datasets import base
@@ -103,6 +103,7 @@ def preprocess_cifar10_data(X_train_raw, Y_train_raw, X_test_raw, Y_test_raw):
 
   return X_train, Y_train, X_test, Y_test
 
+
 def dense_to_one_hot(labels_dense, num_classes):
   """
   Convert class labels from scalars to one-hot vectors.
@@ -119,7 +120,8 @@ def dense_to_one_hot(labels_dense, num_classes):
   labels_one_hot.flat[index_offset + labels_dense.ravel()] = 1
   return labels_one_hot
 
-def create_dataset(source='Train', num_tuples = 500, batch_size = 128, fraction_same = 0.2):
+
+def create_dataset(source_data, num_tuples = 500, batch_size = 128, fraction_same = 0.2):
     """
     Creates a list of validation tuples. A tuple consist of image pairs and a label.
     A tuple is basically a minibatch to be used in validation.
@@ -143,7 +145,7 @@ def create_dataset(source='Train', num_tuples = 500, batch_size = 128, fraction_
     The ratio between the number of + and - cases is controlled by fraction_same.
 
     Args:
-      source: Where to sample from train or test set.
+      source_data: Subset of CIFAR10 data to sample from. You can use validation split here.
       num_tuples: Number of tuples to be used in the validation
       batch_size: Batch size.
       fraction_same: float in range [0,1], defines the fraction
@@ -156,7 +158,28 @@ def create_dataset(source='Train', num_tuples = 500, batch_size = 128, fraction_
     ########################
     # PUT YOUR CODE HERE  #
     ########################
-    raise NotImplementedError
+    images = source_data.images
+    labels = source_data.labels
+    dset = []
+
+    for n in range(num_tuples):
+        idx = np.random.randint(0, labels.shape[0])
+        # pick label
+        x1 = images[idx, :]
+        x1 = np.stack([x1 for k in range(batch_size)])
+        ldx = np.argmax(labels[idx, :])  # assume 1-hot
+
+        # get indices of same label entries and inverse
+        matches = labels[:, ldx] == 1
+        inv_matches = matches == 0
+        # pick samples
+        indices = np.arange(labels.shape[0], dtype=int)
+        n_same = int(np.floor(batch_size * fraction_same))
+        same = images[np.random.choice(indices[matches], size=n_same, replace=False), :]
+        diff = images[np.random.choice(indices[inv_matches], size=batch_size - n_same, replace=False), :]
+        x2 = np.concatenate([same, diff])
+        y = np.concatenate([np.ones((n_same,)), np.zeros((batch_size - n_same,))])
+        dset.append((x1, x2, y))
     ########################
     # END OF YOUR CODE    #
     ########################
@@ -236,12 +259,31 @@ class DataSet(object):
     ########################
     # PUT YOUR CODE HERE  #
     ########################
-    raise NotImplementedError
+    x1, x2, labels = create_dataset(self, num_tuples = 1, batch_size = batch_size,
+                                    fraction_same = fraction_same)[0]
+    # idx = np.random.randint(0, self.labels.shape[0])
+    # # pick label
+    # x1 = self.images[idx, :]
+    # x1 = np.stack([x1 for k in range(batch_size)])
+    # ldx = np.argmax(self.labels[idx, :])  # assume 1-hot
+    #
+    # # get indices of same label entries and inverse
+    # matches = self.labels[:, ldx] == 1
+    # inv_matches = matches == 0
+    # # pick samples
+    # indices = np.arange(self.labels.shape[0], dtype=int)
+    # n_same = int(np.floor(batch_size * fraction_same))
+    # same = self.images[np.random.choice(indices[matches], size=n_same, replace=False), :]
+    # diff = self.images[np.random.choice(indices[inv_matches], size=batch_size - n_same, replace=False), :]
+    # x2 = np.concatenate([same, diff])
+    # labels = np.concatenate([np.ones((n_same,)), np.zeros((batch_size - n_same,))])
+
     ########################
     # END OF YOUR CODE    #
     ########################
 
     return x1, x2, labels
+
 
 def read_data_sets(data_dir, one_hot = True, validation_size = 0):
   """
