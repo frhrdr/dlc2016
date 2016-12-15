@@ -264,7 +264,7 @@ def feature_extraction(check_point_name='ckpt-15000'):
     depending on your preference. You will use those files later in the assignment.
 
     Args:
-        [optional]
+        check_point_name
     Returns:
         None
     """
@@ -321,7 +321,7 @@ def tsne_visualize():
     proj = model.fit_transform(feat_x[:FLAGS.tsne_res, :])
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'brown', 'orange', 'gray']
 
-    fig = plt.figure()
+    plt.figure()
     ax = plt.subplot(111)
     for idx in range(int(np.max(y)) + 1):
         x_i = proj[y == idx, :]
@@ -348,10 +348,7 @@ def plot_confusion_matrix(cm, classes,  # taken form scikit learn
                           normalize=True,
                           title='Confusion matrix',
                           cmap=None):
-    """
-    This function prints and plots the confusion matrix.
-    Normalization can be applied by setting `normalize=True`.
-    """
+
     if cmap is None:
         cmap = plt.cm.Blues
 
@@ -395,6 +392,7 @@ def initialize_folders():
     if not tf.gfile.Exists(FLAGS.checkpoint_dir):
         tf.gfile.MakeDirs(FLAGS.checkpoint_dir)
 
+
 def print_flags():
     """
     Prints all entries in FLAGS variable.
@@ -402,60 +400,63 @@ def print_flags():
     for key, value in vars(FLAGS).items():
         print(key + ' : ' + str(value))
 
+
 def main(_):
     print_flags()
 
     initialize_folders()
-
-    if eval(FLAGS.is_train):
+    if FLAGS.task == 'train':
         if FLAGS.train_model == 'linear':
             train()
         elif FLAGS.train_model == 'siamese':
             train_siamese()
         else:
             raise ValueError("--train_model argument can be linear or siamese")
-    elif FLAGS.feat_file != '':
-        if FLAGS.tsne_res == -1:
-            n_v_1_classify()
-        else:
-            tsne_visualize()
-    else:
+    elif FLAGS.task == 'extract':
         feature_extraction()
+    elif FLAGS.task == 'nv1':
+        n_v_1_classify()
+    elif FLAGS.task == 'tsne':
+        tsne_visualize()
+    else:
+        raise ValueError('unknown task')
 
 if __name__ == '__main__':
     # Command line arguments
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--learning_rate', type = float, default = LEARNING_RATE_DEFAULT,
-                      help='Learning rate')
+                        help='Learning rate')
     parser.add_argument('--max_steps', type = int, default = MAX_STEPS_DEFAULT,
-                      help='Number of steps to run trainer.')
+                        help='Number of steps to run trainer.')
     parser.add_argument('--batch_size', type = int, default = BATCH_SIZE_DEFAULT,
-                      help='Batch size to run trainer.')
+                        help='Batch size to run trainer.')
     parser.add_argument('--print_freq', type = int, default = PRINT_FREQ_DEFAULT,
-                      help='Frequency of evaluation on the train set')
+                        help='Frequency of evaluation on the train set')
     parser.add_argument('--eval_freq', type = int, default = EVAL_FREQ_DEFAULT,
-                      help='Frequency of evaluation on the test set')
+                        help='Frequency of evaluation on the test set')
     parser.add_argument('--checkpoint_freq', type = int, default = CHECKPOINT_FREQ_DEFAULT,
-                      help='Frequency with which the model state is saved.')
+                        help='Frequency with which the model state is saved.')
     parser.add_argument('--data_dir', type = str, default = DATA_DIR_DEFAULT,
-                      help='Directory for storing input data')
+                        help='Directory for storing input data')
     parser.add_argument('--log_dir', type = str, default = LOG_DIR_DEFAULT,
-                      help='Summaries log directory')
+                        help='Summaries log directory')
     parser.add_argument('--checkpoint_dir', type = str, default = CHECKPOINT_DIR_DEFAULT,
-                      help='Checkpoint directory')
-    parser.add_argument('--is_train', type = str, default = 'True',
-                      help='Training or feature extraction')
+                        help='Checkpoint directory')
+    # parser.add_argument('--is_train', type = str, default = 'True',
+    #                   help='Training or feature extraction')
     parser.add_argument('--train_model', type = str, default = 'linear',
-                      help='Type of model. Possible options: linear and siamese')
+                        help='Type of model. Possible options: linear and siamese')
+    parser.add_argument('--task', type = str, default = 'train',
+                        help='Category of task to be executed (train, extract, nv1, tsne')
     parser.add_argument('--extract_op', type = str, default = 'ConvNet/dense1/d1_out',  # sorry, but this just
-                      help='Name of operation for which features are extracted')        # makes things a lot cleaner
+                        help='Name of operation for which features are extracted')        # makes things a lot cleaner
     parser.add_argument('--feat_file', type = str, default = '',
-                      help='Name of features file to be visualized or classified')
+                        help='Name of features file to be visualized or classified')
     parser.add_argument('--tsne_res', type = int, default = -1,
-                      help='number of test samples to be visualized')
+                        help='number of test samples to be visualized')
     parser.add_argument('--nv1_cut', type = int, default = 10000,
-                      help='number of test samples to be used in classification')
+                        help='number of test samples to be used in classification')
     FLAGS, unparsed = parser.parse_known_args()
 
     tf.app.run()

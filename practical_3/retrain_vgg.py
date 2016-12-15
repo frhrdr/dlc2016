@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import argparse
 import os
+from vgg import load_pretrained_VGG16_pool5
 
 import tensorflow as tf
 import numpy as np
@@ -72,6 +73,11 @@ def train():
     ########################
     # PUT YOUR CODE HERE  #
     ########################
+    with tf.Graph().as_default():
+        x_pl = tf.placeholder()
+
+        pool5, assign_ops = load_pretrained_VGG16_pool5(x_pl, scope_name='vgg')
+
     raise NotImplementedError
     ########################
     # END OF YOUR CODE    #
