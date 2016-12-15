@@ -274,13 +274,17 @@ def feature_extraction(check_point_name='ckpt-15000'):
     ########################
     cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
     x, y = cifar10.test.images, cifar10.test.labels
-    cnn = ConvNet()
+    # cnn = ConvNet()
     data_dims = list(cifar10.train.images.shape[1:])
 
     with tf.Graph().as_default() as graph:
 
         x_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
-        cnn.inference(x_pl)
+
+        if FLAGS.train_model == 'linear':
+            ConvNet().inference(x_pl)
+        elif FLAGS.train_model == 'siamese':
+            Siamese().inference(x_pl)
         feature_op = graph.get_tensor_by_name(FLAGS.extract_op + ':0')
 
         num_samples = x.shape[0]
