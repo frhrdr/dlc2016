@@ -417,7 +417,7 @@ def main(_):
         else:
             raise ValueError("--train_model argument can be linear or siamese")
     elif FLAGS.task == 'extract':
-        feature_extraction()
+        feature_extraction(FLAGS.ckpt_file)
     elif FLAGS.task == 'nv1':
         n_v_1_classify()
     elif FLAGS.task == 'tsne':
@@ -454,7 +454,7 @@ if __name__ == '__main__':
     parser.add_argument('--task', type = str, default = 'train',
                         help='Category of task to be executed (train, extract, nv1, tsne')
     parser.add_argument('--extract_op', type = str, default = 'ConvNet/dense1/d1_out',  # sorry, but this just
-                        help='Name of operation for which features are extracted')        # makes things a lot cleaner
+                        help='Name of operation for which features are extracted')      # makes things a lot cleaner
     parser.add_argument('--feat_file', type = str, default = '',
                         help='Name of features file to be visualized or classified')
     parser.add_argument('--tsne_res', type = int, default = -1,
@@ -463,6 +463,8 @@ if __name__ == '__main__':
                         help='number of test samples to be used in classification')
     parser.add_argument('--margin', type = float, default = 0.2,
                         help='margin for siamese networks')
+    parser.add_argument('--ckpt_file', type = str, default = 'ckpt-15000',
+                        help='checkpoint file to be used for extraction')
     FLAGS, unparsed = parser.parse_known_args()
 
     tf.app.run()
