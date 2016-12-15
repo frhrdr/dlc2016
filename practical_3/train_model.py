@@ -210,7 +210,7 @@ def train_siamese():
 
         c1 = siam.inference(c1_pl, reuse=False)
         c2 = siam.inference(c2_pl, reuse=True)
-        loss = siam.loss(c1, c2, label=y_pl, margin=0.2)
+        loss = siam.loss(c1, c2, label=y_pl, margin=FLAGS.margin)
 
         train_op = train_step(loss)
         summary_op = tf.merge_all_summaries()
@@ -457,6 +457,8 @@ if __name__ == '__main__':
                         help='number of test samples to be visualized')
     parser.add_argument('--nv1_cut', type = int, default = 10000,
                         help='number of test samples to be used in classification')
+    parser.add_argument('--margin', type = float, default = 0.2,
+                        help='margin for siamese networks')
     FLAGS, unparsed = parser.parse_known_args()
 
     tf.app.run()

@@ -44,6 +44,42 @@ def train_step(loss):
 
     return train_op
 
+
+def fully_connected_layers(vgg_output):
+    # dense layers
+    with tf.name_scope('dense'):
+        flat = tf.reshape(vgg_output, [vgg_output.get_shape()[0].value, -1], name='flat_out')
+
+        xavier = tf.contrib.layers.xavier_initializer()
+        const0 = tf.constant_initializer(0.)
+        l2_reg = tf.contrib.layers.l2_regularizer(0.1)
+        n_classes = 10
+
+        with tf.name_scope('dense1'):
+            w1 = tf.get_variable('w1', shape=[flat.get_shape()[1], 384], dtype=tf.float32,
+                                 initializer=xavier, regularizer=l2_reg)
+            b1 = tf.get_variable('b1', shape=[384], dtype=tf.float32,
+                                 initializer=const0)
+            fc1 = tf.nn.relu(tf.matmul(flat, w1) + b1, name='d1_out')
+
+        # fc2	        Multiplication	[384, 192]
+        #               ReLU
+        with tf.name_scope('dense2'):
+            w2 = tf.get_variable('w2', shape=[384, 192], dtype=tf.float32,
+                                 initializer=xavier, regularizer=l2_reg)
+            b2 = tf.get_variable('b2', shape=[192], dtype=tf.float32,
+                                 initializer=const0)
+            fc2 = tf.nn.relu(tf.matmul(fc1, w2) + b2, name='d2_out')
+
+        # fc3	        Multiplication	[192, 10]
+        with tf.name_scope('dense3'):
+            w3 = tf.get_variable('w3', shape=[192, self.n_classes], dtype=tf.float32,
+                                 initializer=xavier, regularizer=l2_reg)
+            b3 = tf.get_variable('b3', shape=[n_classes], dtype=tf.float32,
+                                 initializer=const0)
+            fc3 = tf.matmul(fc2, w3) + b3
+        return fc3
+
 def train():
     """
     Performs training and evaluation of your model.
@@ -77,6 +113,7 @@ def train():
         x_pl = tf.placeholder()
 
         pool5, assign_ops = load_pretrained_VGG16_pool5(x_pl, scope_name='vgg')
+        fc3 = fully_connected_layers(pool5)
 
     raise NotImplementedError
     ########################
