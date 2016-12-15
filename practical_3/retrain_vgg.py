@@ -5,7 +5,7 @@ from __future__ import print_function
 import argparse
 import os
 from vgg import load_pretrained_VGG16_pool5
-
+import cifar10_utils
 import tensorflow as tf
 import numpy as np
 
@@ -37,7 +37,7 @@ def train_step(loss):
     ########################
     # PUT YOUR CODE HERE  #
     ########################
-    raise NotImplementedError
+    train_op = tf.train.AdamOptimizer(FLAGS.learning_rate).minimize(loss)
     ########################
     # END OF YOUR CODE    #
     ########################
@@ -73,12 +73,38 @@ def fully_connected_layers(vgg_output):
 
         # fc3	        Multiplication	[192, 10]
         with tf.name_scope('dense3'):
-            w3 = tf.get_variable('w3', shape=[192, self.n_classes], dtype=tf.float32,
+            w3 = tf.get_variable('w3', shape=[192, n_classes], dtype=tf.float32,
                                  initializer=xavier, regularizer=l2_reg)
             b3 = tf.get_variable('b3', shape=[n_classes], dtype=tf.float32,
                                  initializer=const0)
             fc3 = tf.matmul(fc2, w3) + b3
         return fc3
+
+
+def vgg_loss(logits, labels):
+    ce_loss = tf.nn.softmax_cross_entropy_with_logits(logits, labels)
+    ce_loss = tf.reduce_mean(ce_loss)
+    reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    reg_loss = tf.to_float(0.)
+    if None not in reg_losses:  # this IS meant to switch while building the graph
+        reg_loss = reduce(lambda x, y: tf.add(x, y), reg_losses)
+    loss = ce_loss + reg_loss
+    tf.scalar_summary('ce_loss', ce_loss)
+    tf.scalar_summary('reg_loss', reg_loss)
+    tf.scalar_summary('full_loss', loss)
+
+    return loss
+
+
+def accuracy(logits, labels):
+        guesses = tf.argmax(logits, dimension=1)
+        targets = tf.argmax(labels, dimension=1)
+        score = tf.to_int32(tf.equal(guesses, targets))
+        acc = tf.reduce_sum(score) / tf.size(score)
+
+        tf.scalar_summary('accuracy', acc)
+        return acc
+
 
 def train():
     """
@@ -109,16 +135,71 @@ def train():
     ########################
     # PUT YOUR CODE HERE  #
     ########################
+    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
+    data_dims = list(cifar10.train.images.shape[1:])
+    n_classes = 10
     with tf.Graph().as_default():
-        x_pl = tf.placeholder()
+        x_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
+        y_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size, n_classes])
 
         pool5, assign_ops = load_pretrained_VGG16_pool5(x_pl, scope_name='vgg')
-        fc3 = fully_connected_layers(pool5)
+        pool5 = tf.stop_gradient(pool5)
+        logits = fully_connected_layers(pool5)
+        loss = vgg_loss(logits, y_pl)
+        acc = accuracy(logits, y_pl)
 
-    raise NotImplementedError
+        train_op = train_step(loss)
+        summary_op = tf.merge_all_summaries()
+        init_op = tf.initialize_all_variables()
+
+        with tf.Session() as sess:
+            saver = tf.train.Saver()
+            sess.run(init_op)
+            sess.run(assign_ops)
+            train_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/train', sess.graph)
+            test_summary_writer = tf.train.SummaryWriter(FLAGS.log_dir + '/test', sess.graph)
+
+            for step in range(FLAGS.max_steps):
+                x, y = cifar10.train.next_batch(FLAGS.batch_size)
+                feed = {x_pl: x, y_pl: y}
+                train_loss, train_acc, summary_str, _ = sess.run([loss, acc, summary_op, train_op], feed_dict=feed)
+
+                if step == 0 or (step + 1) % FLAGS.print_freq == 0 or step + 1 == FLAGS.max_steps:
+                    print('TRAIN step: ', str(step), ' err: ', str(train_loss), ' acc: ', str(train_acc))
+                    train_summary_writer.add_summary(summary_str, step)
+                    train_summary_writer.flush()
+                if step == 0 or (step + 1) % FLAGS.eval_freq == 0 or step + 1 == FLAGS.max_steps:
+                    x, y = cifar10.test.images, cifar10.test.labels
+                    num_batches = int(np.floor(x.shape[0] / FLAGS.batch_size))
+
+                    test_err = 0.
+                    test_acc = 0.
+                    for idx in range(num_batches):
+
+                        x_batch = x[idx * FLAGS.batch_size:(idx + 1) * FLAGS.batch_size, :, :, :]
+                        y_batch = y[idx * FLAGS.batch_size:(idx + 1) * FLAGS.batch_size, :]
+                        feed = {x_pl: x_batch, y_pl: y_batch}
+
+                        batch_err, batch_acc = sess.run([loss, acc], feed_dict=feed)
+
+                        test_err += batch_err
+                        test_acc += batch_acc
+
+                    test_err /= num_batches
+                    test_acc /= num_batches
+                    print('--- TEST --- step: ', str(step), ' err: ', str(train_loss), ' acc: ', str(train_acc))
+
+                    summary_str = sess.run(summary_op, feed_dict=feed)  # possibly incorrect. should pool summaries
+                    test_summary_writer.add_summary(summary_str, step)
+                    test_summary_writer.flush()
+                if (step + 1) % FLAGS.checkpoint_freq == 0 or step + 1 == FLAGS.max_steps:
+                    checkpoint_file = os.path.join(FLAGS.checkpoint_dir, 'ckpt')
+                    saver.save(sess, checkpoint_file, global_step=(step + 1))
+
     ########################
     # END OF YOUR CODE    #
     ########################
+
 
 def initialize_folders():
     """
@@ -134,12 +215,14 @@ def initialize_folders():
     if not tf.gfile.Exists(FLAGS.checkpoint_dir):
         tf.gfile.MakeDirs(FLAGS.checkpoint_dir)
 
+
 def print_flags():
     """
     Prints all entries in FLAGS variable.
     """
     for key, value in vars(FLAGS).items():
         print(key + ' : ' + str(value))
+
 
 def main(_):
     print_flags()
@@ -171,7 +254,6 @@ if __name__ == '__main__':
                       help='Summaries log directory')
     parser.add_argument('--checkpoint_dir', type = str, default = CHECKPOINT_DIR_DEFAULT,
                       help='Checkpoint directory')
-
 
     FLAGS, unparsed = parser.parse_known_args()
 

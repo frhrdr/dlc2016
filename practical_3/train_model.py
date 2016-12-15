@@ -16,8 +16,8 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import LinearSVC
 from sklearn.manifold import TSNE
 from sklearn.metrics import confusion_matrix
-#import matplotlib.pyplot as plt
-plt = None
+import matplotlib.pyplot as plt
+#plt = None
 
 LEARNING_RATE_DEFAULT = 1e-4
 BATCH_SIZE_DEFAULT = 128
@@ -365,7 +365,7 @@ def plot_confusion_matrix(cm, classes,  # taken form scikit learn
 
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
+        cm = np.round(cm, 2)
     thresh = cm.max() / 2.
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
         plt.text(j, i, cm[i, j],
