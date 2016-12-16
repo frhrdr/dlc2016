@@ -143,7 +143,7 @@ def train():
         y_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size, n_classes])
         stopgrads = tf.placeholder(dtype=tf.bool)
         pool5, assign_ops = load_pretrained_VGG16_pool5(x_pl, scope_name='vgg')
-        pool5 = tf.cond(stopgrads, tf.stop_gradient(pool5), pool5)
+        pool5 = tf.cond(stopgrads, lambda: tf.stop_gradient(pool5), lambda: pool5)
         logits = fully_connected_layers(pool5)
         loss = vgg_loss(logits, y_pl)
         acc = accuracy(logits, y_pl)
