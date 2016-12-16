@@ -193,9 +193,8 @@ def train():
                     test_summary_writer.add_summary(summary_str, step)
                     test_summary_writer.flush()
                 if (step + 1) % FLAGS.checkpoint_freq == 0 or step + 1 == FLAGS.max_steps:
-                    pass
-                    # checkpoint_file = os.path.join(FLAGS.checkpoint_dir, 'ckpt')
-                    # saver.save(sess, checkpoint_file, global_step=(step + 1))
+                    checkpoint_file = os.path.join(FLAGS.checkpoint_dir, 'ckpt')
+                    saver.save(sess, checkpoint_file, global_step=(step + 1))
 
     ########################
     # END OF YOUR CODE    #
@@ -236,25 +235,25 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--learning_rate', type = float, default = LEARNING_RATE_DEFAULT,
-                      help='Learning rate')
+                        help='Learning rate')
     parser.add_argument('--max_steps', type = int, default = MAX_STEPS_DEFAULT,
-                      help='Number of steps to run trainer.')
+                        help='Number of steps to run trainer.')
     parser.add_argument('--batch_size', type = int, default = BATCH_SIZE_DEFAULT,
-                      help='Batch size to run trainer.')
+                        help='Batch size to run trainer.')
     parser.add_argument('--print_freq', type = int, default = PRINT_FREQ_DEFAULT,
-                      help='Frequency of evaluation on the train set')
+                        help='Frequency of evaluation on the train set')
     parser.add_argument('--eval_freq', type = int, default = EVAL_FREQ_DEFAULT,
-                      help='Frequency of evaluation on the test set')
+                        help='Frequency of evaluation on the test set')
     parser.add_argument('--refine_after_k', type = int, default = REFINE_AFTER_K_STEPS_DEFAULT,
-                      help='Number of steps after which to refine VGG model parameters (default 0).')
+                        help='Number of steps after which to refine VGG model parameters (default 0).')
     parser.add_argument('--checkpoint_freq', type = int, default = CHECKPOINT_FREQ_DEFAULT,
-                      help='Frequency with which the model state is saved.')
+                        help='Frequency with which the model state is saved.')
     parser.add_argument('--data_dir', type = str, default = DATA_DIR_DEFAULT,
-                      help='Directory for storing input data')
+                        help='Directory for storing input data')
     parser.add_argument('--log_dir', type = str, default = LOG_DIR_DEFAULT,
-                      help='Summaries log directory')
+                        help='Summaries log directory')
     parser.add_argument('--checkpoint_dir', type = str, default = CHECKPOINT_DIR_DEFAULT,
-                      help='Checkpoint directory')
+                        help='Checkpoint directory')
 
     FLAGS, unparsed = parser.parse_known_args()
 
