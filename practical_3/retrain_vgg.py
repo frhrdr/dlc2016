@@ -179,7 +179,7 @@ def train():
 
                         x_batch = x[idx * FLAGS.batch_size:(idx + 1) * FLAGS.batch_size, :, :, :]
                         y_batch = y[idx * FLAGS.batch_size:(idx + 1) * FLAGS.batch_size, :]
-                        feed = {x_pl: x_batch, y_pl: y_batch}
+                        feed = {x_pl: x_batch, y_pl: y_batch, stopgrads: True}
 
                         batch_err, batch_acc = sess.run([loss, acc], feed_dict=feed)
 
