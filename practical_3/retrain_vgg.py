@@ -141,9 +141,9 @@ def train():
     with tf.Graph().as_default():
         x_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size] + data_dims)
         y_pl = tf.placeholder(dtype=tf.float32, shape=[FLAGS.batch_size, n_classes])
-
+        stopgrads = tf.placeholder(dtype=tf.bool)
         pool5, assign_ops = load_pretrained_VGG16_pool5(x_pl, scope_name='vgg')
-        pool5 = tf.stop_gradient(pool5)
+        pool5 = tf.cond(stopgrads, tf.stop_gradient(pool5), pool5)
         logits = fully_connected_layers(pool5)
         loss = vgg_loss(logits, y_pl)
         acc = accuracy(logits, y_pl)
@@ -161,7 +161,8 @@ def train():
 
             for step in range(FLAGS.max_steps):
                 x, y = cifar10.train.next_batch(FLAGS.batch_size)
-                feed = {x_pl: x, y_pl: y}
+                switch = True if step < FLAGS.refine_after_k else False
+                feed = {x_pl: x, y_pl: y, stopgrads: switch}
                 train_loss, train_acc, summary_str, _ = sess.run([loss, acc, summary_op, train_op], feed_dict=feed)
 
                 if step == 0 or (step + 1) % FLAGS.print_freq == 0 or step + 1 == FLAGS.max_steps:
