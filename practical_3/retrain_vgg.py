@@ -185,14 +185,16 @@ def train():
 
                         test_err += batch_err
                         test_acc += batch_acc
-
+                        summary_str = sess.run(summary_op, feed_dict=feed)  # possibly incorrect. should pool summaries
+                        test_summary_writer.add_summary(summary_str, step)
+                        test_summary_writer.flush()
                     test_err /= num_batches
                     test_acc /= num_batches
                     print('--- TEST --- step: ', str(step), ' err: ', str(train_loss), ' acc: ', str(train_acc))
 
-                    summary_str = sess.run(summary_op, feed_dict=feed)  # possibly incorrect. should pool summaries
-                    test_summary_writer.add_summary(summary_str, step)
-                    test_summary_writer.flush()
+                    # summary_str = sess.run(summary_op, feed_dict=feed)  # possibly incorrect. should pool summaries
+                    # test_summary_writer.add_summary(summary_str, step)
+                    # test_summary_writer.flush()
                 if (step + 1) % FLAGS.checkpoint_freq == 0 or step + 1 == FLAGS.max_steps:
                     checkpoint_file = os.path.join(FLAGS.checkpoint_dir, 'ckpt')
                     saver.save(sess, checkpoint_file, global_step=(step + 1))
