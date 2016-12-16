@@ -150,8 +150,8 @@ def train():
                     test_summary_writer.flush()
                 if (step + 1) % FLAGS.checkpoint_freq == 0 or step + 1 == FLAGS.max_steps:
                     pass
-                    # checkpoint_file = os.path.join(FLAGS.checkpoint_dir, 'ckpt')
-                    # saver.save(sess, checkpoint_file, global_step=(step + 1))
+                    checkpoint_file = os.path.join(FLAGS.checkpoint_dir, 'ckpt')
+                    saver.save(sess, checkpoint_file, global_step=(step + 1))
 
     ########################
     # END OF YOUR CODE    #
